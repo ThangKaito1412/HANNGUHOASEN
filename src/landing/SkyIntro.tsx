@@ -41,17 +41,17 @@ const LAYERS = [
   {count: 3, w: [60, 90], scale: 10, rise: 34, fade: [0.5, 0.74]},
 ] as const;
 
-function CloudLayer({i, t}: {i: number; t: MotionValue<number>}) {
+function CloudLayer({i, t, lite}: {i: number; t: MotionValue<number>; lite?: boolean}) {
   const L = LAYERS[i];
   const clouds = useMemo(() => {
     const r = mulberry32(100 + i * 17);
-    return Array.from({length: L.count}, (_, k) => ({
-      x: -10 + (k / (L.count - 1 || 1)) * 90 + (r() - 0.5) * 18,
+    return Array.from({length: lite ? Math.max(3, L.count - 2) : L.count}, (_, k) => ({
+      x: -10 + (k / ((lite ? Math.max(3, L.count - 2) : L.count) - 1 || 1)) * 90 + (r() - 0.5) * 18,
       y: 4 + r() * 76,
       w: L.w[0] + r() * (L.w[1] - L.w[0]),
       seed: 1 + i * 31 + k * 7,
     }));
-  }, [i, L]);
+  }, [i, L, lite]);
   const scale = useTransform(t, [0, 0.88], [1, L.scale]);
   const y = useTransform(t, [0, 0.88], ['0vh', `-${L.rise}vh`]);
   const START = [1, 0.9, 0.45, 0.12, 0];
@@ -67,7 +67,7 @@ function CloudLayer({i, t}: {i: number; t: MotionValue<number>}) {
 }
 
 /** Cú lia máy từ trên trời, xuyên các tầng mây, hạ xuống ao sen. */
-export default function SkyIntro({t, onSkip}: {t: MotionValue<number>; onSkip: () => void}) {
+export default function SkyIntro({t, onSkip, lite}: {t: MotionValue<number>; onSkip: () => void; lite?: boolean}) {
   const overlay = useTransform(t, [0.84, 1], [1, 0]);
   const mist = useTransform(t, [0.3, 0.62, 0.8, 0.95], [0, 0.55, 0.95, 0]);
   const skyShift = useTransform(t, [0, 1], ['0%', '-25%']);
@@ -84,9 +84,7 @@ export default function SkyIntro({t, onSkip}: {t: MotionValue<number>; onSkip: (
       <motion.div className="sky-bg" style={{y: skyShift}} />
       <motion.div className="sky-sun" style={{scale: sunScale, y: sunY}} />
       <motion.div className="sky-rays" style={{opacity: rays}} />
-      {LAYERS.map((_, i) => (
-        <CloudLayer key={i} i={i} t={t} />
-      ))}
+      {LAYERS.map((_, i) => (lite && i % 2 === 1 ? null : <CloudLayer key={i} i={i} t={t} lite={lite} />))}
       <motion.div className="sky-streak" style={{opacity: speed}} />
       <motion.div className="sky-title" style={{opacity: titleO, scale: titleS, y: titleY}}>
         <span>莲花汉语</span>

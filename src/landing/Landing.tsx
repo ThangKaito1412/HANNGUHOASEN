@@ -4,6 +4,7 @@ import {BookOpen, Clock, Factory, MapPin, Menu, MessageCircle, Phone, Sparkles, 
 import PondScene from './PondScene';
 import {LotusBloom} from './Lotus';
 import SkyIntro from './SkyIntro';
+import {LITE} from './lite';
 import './landing.css';
 
 const PHONE = '0813 616 813';
@@ -11,6 +12,9 @@ const PHONE_LINK = 'tel:0813616813';
 const ZALO = 'https://zalo.me/0813616813';
 const MAP = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Nhà thờ Tha La, An Hòa, Trảng Bàng');
 const ADDRESS = 'Gần nhà thờ Tha La, An Hòa, Trảng Bàng';
+
+const small = (u: string) => u.replace('.jpg', '_s.jpg');
+const thumb = (u: string) => u.replace('/p', '/t');
 
 type Book = {id: string; img: string; ratio: number; title: string; vol: string; kind: 'gt' | 'lv'; desc: string};
 const BOOKS: Book[] = [
@@ -41,6 +45,19 @@ const NAV = [
 ] as const;
 
 function Reveal({children, className = '', delay = 0}: {children: ReactNode; className?: string; delay?: number}) {
+  if (LITE) {
+    return (
+      <motion.div
+        className={className}
+        initial={{opacity: 0, y: 24}}
+        whileInView={{opacity: 1, y: 0}}
+        viewport={{once: true, margin: '0px 0px -8% 0px'}}
+        transition={{duration: 0.55, delay: delay * 0.5, ease: 'easeOut'}}
+      >
+        {children}
+      </motion.div>
+    );
+  }
   return (
     <motion.div
       className={className}
@@ -51,6 +68,23 @@ function Reveal({children, className = '', delay = 0}: {children: ReactNode; cla
     >
       {children}
     </motion.div>
+  );
+}
+
+/** Ảnh có thử tải lại 1 lần nếu lỗi mạng. */
+function Img({src, alt, eager}: {src: string; alt: string; eager?: boolean}) {
+  const [s, setS] = useState(src);
+  return (
+    <img
+      src={s}
+      alt={alt}
+      decoding="async"
+      loading={eager ? 'eager' : 'lazy'}
+      draggable={false}
+      onError={() => {
+        if (!s.includes('?r=')) setTimeout(() => setS(src + '?r=' + Date.now()), 1200);
+      }}
+    />
   );
 }
 
@@ -96,7 +130,13 @@ function Nav({hidden}: {hidden: boolean}) {
   );
 }
 
+type HeroFx = {y?: MotionValue<number>; s?: MotionValue<number>; o?: MotionValue<number>; ly?: MotionValue<number>; ls?: MotionValue<number>};
+
 function Hero({ready}: {ready: boolean}) {
+  return LITE ? <HeroView ready={ready} fx={{}} /> : <HeroScroll ready={ready} />;
+}
+
+function HeroScroll({ready}: {ready: boolean}) {
   const ref = useRef<HTMLElement>(null);
   const {scrollYProgress} = useScroll({target: ref, offset: ['start start', 'end start']});
   const y = useTransform(scrollYProgress, [0, 1], [0, -120]);
@@ -104,11 +144,16 @@ function Hero({ready}: {ready: boolean}) {
   const o = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
   const ly = useTransform(scrollYProgress, [0, 1], [0, 220]);
   const ls = useTransform(scrollYProgress, [0, 1], [1, 0.8]);
+  return <HeroView ready={ready} fx={{y, s, o, ly, ls}} secRef={ref} />;
+}
+
+function HeroView({ready, fx, secRef}: {ready: boolean; fx: HeroFx; secRef?: React.RefObject<HTMLElement | null>}) {
+  const {y, s, o, ly, ls} = fx;
   return (
-    <section id="top" ref={ref} className="hero">
+    <section id="top" ref={secRef} className="hero">
       {ready && (
       <motion.div className="hero-copy" style={{y, scale: s, opacity: o}}>
-        <motion.span className="hero-zh" initial={{opacity: 0, y: 30, filter: 'blur(12px)'}} animate={{opacity: 1, y: 0, filter: 'blur(0px)'}} transition={{duration: 1.4, delay: 0.2}}>
+        <motion.span className="hero-zh" initial={{opacity: 0, y: 30}} animate={{opacity: 1, y: 0}} transition={{duration: 1.4, delay: 0.2}}>
           莲花汉语
         </motion.span>
         <motion.h1 initial={{opacity: 0, y: 40}} animate={{opacity: 1, y: 0}} transition={{duration: 1.1, delay: 0.5}}>
@@ -132,7 +177,7 @@ function Hero({ready}: {ready: boolean}) {
       )}
       {ready && (
       <motion.div className="hero-lotus" style={{y: ly, scale: ls}}>
-        <motion.div animate={{y: [0, -10, 0], rotate: [-1.2, 1.2, -1.2]}} transition={{duration: 7, repeat: Infinity, ease: 'easeInOut'}}>
+        <motion.div animate={LITE ? undefined : {y: [0, -10, 0], rotate: [-1.2, 1.2, -1.2]}} transition={{duration: 7, repeat: Infinity, ease: 'easeInOut'}}>
           <LotusBloom />
         </motion.div>
       </motion.div>
@@ -264,7 +309,70 @@ function FanBook({b, i, n, t, w, vh, onOpen}: {b: Book; i: number; n: number; t:
   );
 }
 
+function BookModal({open, setOpen}: {open: Book | null; setOpen: (b: Book | null) => void}) {
+  return (
+      <Lightbox open={!!open} onClose={() => setOpen(null)}>
+        {open && (
+          <div className="bookmodal">
+            <img src={LITE ? small(open.img) : open.img} alt={`${open.title} ${open.vol}`} />
+            <div>
+              <span className="kicker">{open.kind === 'gt' ? 'Giáo trình' : 'Vở luyện viết'}</span>
+              <h3>
+                {open.title} <em>{open.vol}</em>
+              </h3>
+              <p>{open.desc}</p>
+              {open.kind === 'gt' ? (
+                <a href="/sach" className="btn btn-primary">
+                  <BookOpen size={18} /> Đọc trên sách điện tử
+                </a>
+              ) : (
+                <a href="#lienhe" className="btn btn-ghost" onClick={() => setOpen(null)}>
+                  Hỏi mua / tư vấn
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+    </Lightbox>
+  );
+}
+
 function Books() {
+  return LITE ? <BooksLite /> : <BooksFan />;
+}
+
+function BooksLite() {
+  const [open, setOpen] = useState<Book | null>(null);
+  return (
+    <section id="giaotrinh" className="sec books-lite">
+      <SectionTitle kicker="Giáo trình" title="Bộ sách Hán ngữ Hoa Sen" sub="Chạm vào từng quyển để xem" />
+      <div className="books-grid">
+        {BOOKS.map((b, i) => (
+          <motion.button
+            key={b.id}
+            className="lbook"
+            initial={{opacity: 0, scale: 0.55, y: 30, rotate: (i % 3 - 1) * 9}}
+            whileInView={{opacity: 1, scale: 1, y: 0, rotate: 0}}
+            viewport={{once: true, margin: '0px 0px -10% 0px'}}
+            transition={{type: 'spring', stiffness: 140, damping: 16, delay: i * 0.09}}
+            onClick={() => setOpen(b)}
+            aria-label={`${b.title} ${b.vol}`}
+          >
+            <Img src={small(b.img)} alt={`${b.title} ${b.vol}`} eager />
+            <span>
+              {b.kind === 'gt' ? 'Giáo trình' : 'Luyện viết'}
+              <br />
+              {b.vol}
+            </span>
+          </motion.button>
+        ))}
+      </div>
+      <BookModal open={open} setOpen={setOpen} />
+    </section>
+  );
+}
+
+function BooksFan() {
   const ref = useRef<HTMLElement>(null);
   const {scrollYProgress} = useScroll({target: ref, offset: ['start start', 'end end']});
   const [w, setW] = useState(typeof window === 'undefined' ? 1280 : window.innerWidth || 1280);
@@ -297,29 +405,7 @@ function Books() {
           ))}
         </div>
       </div>
-      <Lightbox open={!!open} onClose={() => setOpen(null)}>
-        {open && (
-          <div className="bookmodal">
-            <img src={open.img} alt={`${open.title} ${open.vol}`} />
-            <div>
-              <span className="kicker">{open.kind === 'gt' ? 'Giáo trình' : 'Vở luyện viết'}</span>
-              <h3>
-                {open.title} <em>{open.vol}</em>
-              </h3>
-              <p>{open.desc}</p>
-              {open.kind === 'gt' ? (
-                <a href="/sach" className="btn btn-primary">
-                  <BookOpen size={18} /> Đọc trên sách điện tử
-                </a>
-              ) : (
-                <a href="#lienhe" className="btn btn-ghost" onClick={() => setOpen(null)}>
-                  Hỏi mua / tư vấn
-                </a>
-              )}
-            </div>
-          </div>
-        )}
-      </Lightbox>
+      <BookModal open={open} setOpen={setOpen} />
     </section>
   );
 }
@@ -350,9 +436,9 @@ function EbookCTA() {
           </a>
         </div>
         <div className="ebook-art">
-          <motion.img src="/site/giaotrinh1.jpg" alt="Giáo trình Hán ngữ quyển 1" animate={{y: [0, -8, 0]}} transition={{duration: 6, repeat: Infinity, ease: 'easeInOut'}} />
-          <motion.img src="/site/giaotrinh2.jpg" alt="Giáo trình Hán ngữ quyển 2" animate={{y: [0, 10, 0]}} transition={{duration: 7, repeat: Infinity, ease: 'easeInOut'}} />
-          <motion.img src="/site/giaotrinh3.jpg" alt="Giáo trình Hán ngữ quyển 3" animate={{y: [0, -12, 0]}} transition={{duration: 8, repeat: Infinity, ease: 'easeInOut'}} />
+          <motion.img src="/site/giaotrinh1_s.jpg" alt="Giáo trình Hán ngữ quyển 1" animate={{y: [0, -8, 0]}} transition={{duration: 6, repeat: Infinity, ease: 'easeInOut'}} />
+          <motion.img src="/site/giaotrinh2_s.jpg" alt="Giáo trình Hán ngữ quyển 2" animate={{y: [0, 10, 0]}} transition={{duration: 7, repeat: Infinity, ease: 'easeInOut'}} />
+          <motion.img src="/site/giaotrinh3_s.jpg" alt="Giáo trình Hán ngữ quyển 3" animate={{y: [0, -12, 0]}} transition={{duration: 8, repeat: Infinity, ease: 'easeInOut'}} />
         </div>
       </Reveal>
     </section>
@@ -369,14 +455,14 @@ function Gallery() {
           <motion.button
             key={p.src}
             className={'gitem ' + p.cls}
-            initial={{opacity: 0, scale: 0.9, clipPath: 'circle(6% at 50% 50%)'}}
-            whileInView={{opacity: 1, scale: 1, clipPath: 'circle(100% at 50% 50%)'}}
-            viewport={{once: true, margin: '-10% 0px'}}
-            transition={{duration: 1.1, delay: (i % 3) * 0.12, ease: [0.2, 0.8, 0.2, 1]}}
+            initial={LITE ? {opacity: 0, scale: 0.92} : {opacity: 0, scale: 0.9, clipPath: 'circle(6% at 50% 50%)'}}
+            whileInView={LITE ? {opacity: 1, scale: 1} : {opacity: 1, scale: 1, clipPath: 'circle(100% at 50% 50%)'}}
+            viewport={{once: true, margin: LITE ? '0px 0px -8% 0px' : '-10% 0px'}}
+            transition={LITE ? {duration: 0.45, delay: i * 0.06} : {duration: 1.1, delay: (i % 3) * 0.12, ease: [0.2, 0.8, 0.2, 1]}}
             onClick={() => setOpen(p)}
             aria-label={p.alt}
           >
-            <img src={p.src} alt={p.alt} loading="lazy" />
+            <Img src={thumb(p.src)} alt={p.alt} eager={LITE} />
           </motion.button>
         ))}
       </div>
@@ -412,10 +498,22 @@ function Contact() {
           </a>
         </Reveal>
         <Reveal className="contact-photo" delay={0.15}>
-          <img src="/site/p1.jpg" alt="Bảng hiệu Hán Ngữ Hoa Sen" loading="lazy" />
+          <Img src="/site/t1.jpg" alt="Bảng hiệu Hán Ngữ Hoa Sen" eager={LITE} />
         </Reveal>
       </div>
     </section>
+  );
+}
+
+const PAGE_IDS = ['top', 'gioithieu', 'lichhoc', 'giaotrinh', 'sachdientu', 'lophoc', 'lienhe'];
+
+function PageDots({page}: {page: number}) {
+  return (
+    <nav className="dots" aria-label="Trang">
+      {PAGE_IDS.map((id, i) => (
+        <a key={id} href={'#' + id} className={i === page ? 'on' : ''} aria-label={'Trang ' + (i + 1)} />
+      ))}
+    </nav>
   );
 }
 
@@ -444,6 +542,7 @@ function Lightbox({open, onClose, children}: {open: boolean; onClose: () => void
 
 export default function Landing() {
   const [docH, setDocH] = useState(6000);
+  const [page, setPage] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
   const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const [playing, setPlaying] = useState(!reduce);
@@ -467,7 +566,7 @@ export default function Landing() {
     const html = document.documentElement;
     const prev = html.style.overflow;
     html.style.overflow = 'hidden';
-    anim.current = animate(descent, 1, {duration: 7.5, ease: [0.45, 0.05, 0.4, 1], onComplete: finish});
+    anim.current = animate(descent, 1, {duration: LITE ? 5 : 7.5, ease: [0.45, 0.05, 0.4, 1], onComplete: finish});
     const unsub = descent.on('change', (v) => v > 0.86 && setReady(true));
     const key = (e: KeyboardEvent) => e.key === 'Escape' && skip();
     window.addEventListener('keydown', key);
@@ -480,6 +579,7 @@ export default function Landing() {
   }, [playing]);
 
   useEffect(() => {
+    if (LITE) return;
     const m = () => setDocH(Math.max(document.documentElement.scrollHeight, 3000));
     m();
     const ro = new ResizeObserver(m);
@@ -491,32 +591,42 @@ export default function Landing() {
     };
   }, []);
 
-  // Chuyển cảnh: mỗi lần sang mục mới, một vòng sóng lớn lan ra từ giữa màn hình
+  // Chuyển cảnh: mỗi lần sang mục mới, một vòng sóng lớn lan ra; ghi nhận trang đang xem
   useEffect(() => {
-    const ids = ['gioithieu', 'lichhoc', 'giaotrinh', 'sachdientu', 'lophoc', 'lienhe'];
     const seen = new Set<string>();
     const io = new IntersectionObserver(
       (es) =>
         es.forEach((e) => {
-          if (e.isIntersecting && !seen.has(e.target.id)) {
+          if (!e.isIntersecting) return;
+          const idx = PAGE_IDS.indexOf(e.target.id);
+          if (idx >= 0) setPage(idx);
+          if (!seen.has(e.target.id)) {
             seen.add(e.target.id);
-            window.dispatchEvent(new CustomEvent('pond-ripple', {detail: {x: window.innerWidth / 2, y: window.innerHeight * 0.5}}));
+            if (idx > 0) window.dispatchEvent(new CustomEvent('pond-ripple', {detail: {x: window.innerWidth / 2, y: window.innerHeight * 0.5}}));
           }
         }),
-      {threshold: 0.25}
+      {threshold: LITE ? 0.6 : 0.25}
     );
-    ids.forEach((id) => {
+    PAGE_IDS.forEach((id) => {
       const el = document.getElementById(id);
       if (el) io.observe(el);
     });
     return () => io.disconnect();
   }, []);
 
+  // Mobile: cuộn theo từng trang (snap)
+  useEffect(() => {
+    if (!LITE) return;
+    document.documentElement.classList.add('paged');
+    return () => document.documentElement.classList.remove('paged');
+  }, []);
+
   return (
-    <div className="landing" ref={rootRef}>
-      <PondScene docH={docH} descent={descent} />
-      {playing && <SkyIntro t={descent} onSkip={skip} />}
+    <div className={'landing' + (LITE ? ' lite' : '')} ref={rootRef}>
+      <PondScene docH={docH} descent={descent} page={page} />
+      {playing && <SkyIntro t={descent} onSkip={skip} lite={LITE} />}
       <Nav hidden={!ready} />
+      {LITE && ready && <PageDots page={page} />}
       <main>
         <Hero ready={ready} />
         <About />

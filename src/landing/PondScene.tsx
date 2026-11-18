@@ -1,6 +1,7 @@
 import {useEffect, useMemo, useRef} from 'react';
 import {motion, useScroll, useTransform, useSpring, useMotionValue, type MotionValue} from 'motion/react';
 import {LilyPad, LotusStatic} from './Lotus';
+import {LITE} from './lite';
 import {makeKoi, stepKoi, drawKoi, type Koi} from './Koi';
 
 function mulberry32(seed: number) {
@@ -39,7 +40,7 @@ function PondCanvas() {
     let bubbles: Bubble[] = [];
 
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+      dpr = LITE ? 1 : Math.min(window.devicePixelRatio || 1, 1.75);
       W = window.innerWidth;
       H = window.innerHeight;
       canvas.width = Math.floor(W * dpr);
@@ -48,10 +49,10 @@ function PondCanvas() {
       canvas.style.height = H + 'px';
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const mobile = W < 700;
-      const nFish = mobile ? 4 : 7;
+      const nFish = LITE ? 3 : mobile ? 4 : 7;
       const scale = mobile ? 0.72 : 1;
       fish = Array.from({length: nFish}, (_, i) => makeKoi(i, W, H, scale, rnd));
-      petals = Array.from({length: mobile ? 8 : 16}, () => ({
+      petals = Array.from({length: LITE ? 5 : mobile ? 8 : 16}, () => ({
         x: rnd() * W,
         y: rnd() * H,
         r: rnd() * 6.28,
@@ -60,7 +61,7 @@ function PondCanvas() {
         vy: 0.12 + rnd() * 0.3,
         s: 5 + rnd() * 6,
       }));
-      bubbles = Array.from({length: mobile ? 18 : 40}, () => ({
+      bubbles = Array.from({length: LITE ? 8 : mobile ? 18 : 40}, () => ({
         x: rnd() * W,
         y: rnd() * H,
         r: 1 + rnd() * 3,
@@ -114,8 +115,14 @@ function PondCanvas() {
     document.addEventListener('visibilitychange', onVis);
 
     let last = performance.now();
+    let lastDraw = 0;
     const frame = (now: number) => {
       if (!running) return;
+      if (LITE && now - lastDraw < 30) {
+        raf = requestAnimationFrame(frame);
+        return;
+      }
+      lastDraw = now;
       const dt = Math.min(2.2, (now - last) / 16.67);
       last = now;
       const t = now / 1000;
@@ -123,7 +130,7 @@ function PondCanvas() {
 
       // sun glints under water
       ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < (LITE ? 0 : 5); i++) {
         const gx = (Math.sin(t * 0.07 + i * 1.7) * 0.5 + 0.5) * W;
         const gy = (Math.cos(t * 0.05 + i * 2.3) * 0.5 + 0.5) * H;
         const gr = Math.max(W, H) * (0.22 + 0.05 * Math.sin(t * 0.3 + i));
@@ -301,7 +308,51 @@ function PadLayer({factor, docH, vh, density, seed, scale, opacity}: {factor: nu
 }
 
 /** Nền ao sen cố định + "máy quay" lia theo cuộn trang và con trỏ. */
-export default function PondScene({docH, descent}: {docH: number; descent?: MotionValue<number>}) {
+const PAGE_COLORS = ['#2fb0ac', '#1b93a0', '#128099', '#0f6e84', '#0c5170', '#0b3f66', '#0a2f52'];
+const LITE_PADS = [
+  {x: 6, y: 10, s: 1.4, rot: 20, flower: false, hue: 0.2},
+  {x: 74, y: 18, s: 1.1, rot: 200, flower: true, hue: 0.7},
+  {x: 16, y: 68, s: 1.7, rot: 110, flower: false, hue: 0.9},
+  {x: 78, y: 76, s: 1.3, rot: 300, flower: true, hue: 0.4},
+  {x: 46, y: 44, s: 0.9, rot: 60, flower: false, hue: 0.6},
+];
+
+/** Bản nhẹ cho điện thoại: nền tĩnh đổi màu theo trang, không có hiệu ứng theo cuộn. */
+function PondLite({page, descent}: {page: number; descent?: MotionValue<number>}) {
+  const done = useMotionValue(1);
+  const d = descent ?? done;
+  const introScale = useTransform(d, [0.5, 1], [2.2, 1]);
+  const introY = useTransform(d, [0.5, 1], ['-6%', '0%']);
+  return (
+    <div className="scene" aria-hidden="true">
+      <motion.div className="scene-intro" style={{scale: introScale, y: introY}}>
+        <div className="scene-cam-lite" style={{backgroundColor: PAGE_COLORS[Math.min(page, PAGE_COLORS.length - 1)]}}>
+          <div className="scene-depth" />
+          <PondCanvas />
+          <div className="pads-lite" style={{transform: `translate3d(${((page % 3) - 1) * 18}px, ${page * -14}px, 0) scale(${1 + (page % 2) * 0.05})`}}>
+            {LITE_PADS.map((p, i) => (
+              <div key={i} className="pad" style={{left: p.x + '%', top: p.y + '%', width: 100 * p.s, height: 100 * p.s}}>
+                <LilyPad rot={p.rot} tone={p.hue} />
+                {p.flower && (
+                  <div className="pad-flower" style={{width: 70 * p.s}}>
+                    <LotusStatic />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+      <div className="scene-vignette" />
+    </div>
+  );
+}
+
+export default function PondScene({docH, descent, page = 0}: {docH: number; descent?: MotionValue<number>; page?: number}) {
+  return LITE ? <PondLite page={page} descent={descent} /> : <PondFull docH={docH} descent={descent} />;
+}
+
+function PondFull({docH, descent}: {docH: number; descent?: MotionValue<number>}) {
   const done = useMotionValue(1);
   const d = descent ?? done;
   const introScale = useTransform(d, [0.5, 1], [2.6, 1]);
