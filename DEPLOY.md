@@ -30,3 +30,13 @@ Mua tại nhà đăng ký bất kỳ (PA Vietnam, Mắt Bão, Nhân Hòa, iNET�
 - Server giới hạn 60 lượt gọi API/phút/IP để bảo vệ hạn mức Gemini.
 - Trong Google AI Studio nên đặt hạn mức/cảnh báo chi phí cho khóa.
 - Cập nhật trang: sửa code → `git push` → Render tự deploy lại.
+
+## 6. Tài khoản học viên & trang quản trị (/admin)
+- Học viên đăng nhập ngay trong sách điện tử (`/sach`). 3 bài đầu Quyển 1 và phần Phiên Âm miễn phí.
+- Quản trị tại `/admin` (cấp / thu hồi tài khoản, nhập thông tin mua, xem tiến độ, thống kê).
+- **Lưu dữ liệu bền vững (bắt buộc khi chạy thật):** Render gói Free xóa ổ đĩa mỗi lần deploy.
+  1. Tạo database PostgreSQL miễn phí tại https://neon.tech (hoặc Supabase), copy chuỗi kết nối.
+  2. Render → service → Environment → thêm `DATABASE_URL` = chuỗi đó.
+  3. Thêm `SESSION_SECRET` = một chuỗi ngẫu nhiên dài (để phiên đăng nhập không bị đăng xuất khi khởi động lại).
+  4. (Tùy chọn) `ADMIN_USER` / `ADMIN_PASSWORD` để đổi tài khoản quản trị. Nếu không đặt, hệ thống dùng tài khoản quản trị mặc định đã cấu hình (lưu dạng mã hóa trong mã nguồn).
+- Nội dung sách (từ vựng, bài tập) nằm ở thư mục `private/` và chỉ được gửi cho người có quyền.

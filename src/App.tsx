@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Lock,
 } from 'lucide-react';
 import {
   TextbookDataRaw,
@@ -42,6 +43,11 @@ import {
 } from './data/book2And3Data';
 import { bookAudio, PlayTrackItem } from './utils/audioEngine';
 import { InteractiveBookReader } from './components/InteractiveBookReader';
+import { useAuth } from './auth/AuthContext';
+import { apiFetch } from './auth/api';
+import { AccountBadge } from './auth/AccountBadge';
+import { AuthModal } from './auth/AuthModal';
+import { LockedCard } from './auth/LockedBook';
 import { AudioPlayerBar } from './components/AudioPlayerBar';
 import { DictionaryModal } from './components/DictionaryModal';
 import { SmartPracticeDashboard } from './components/SmartPracticeDashboard';
@@ -81,8 +87,8 @@ const BOOKS_CONFIG: Record<
     shortTitle: 'Quyển 1',
     label: 'Quyển 1',
     subtitle: '13 Bài học & Ngữ pháp Tổng hợp',
-    textbookUrl: '/assets/aistudio/giao_trinh_tieng_trung_q1_13d0c89b.json',
-    exercisesUrl: '/assets/aistudio/bai_tap_tieng_trung_q1_c99e6c3e.json',
+    textbookUrl: '/api/content/q1/textbook',
+    exercisesUrl: '/api/content/q1/exercises',
     defaultLessonId: 'q1_b01',
   },
   q2: {
@@ -90,8 +96,8 @@ const BOOKS_CONFIG: Record<
     shortTitle: 'Quyển 2',
     label: 'Quyển 2',
     subtitle: 'Bài 13–23 & Ngữ pháp 2, 3',
-    textbookUrl: '/assets/aistudio/giao_trinh_tieng_trung_q2_9478e204.json',
-    exercisesUrl: '/assets/aistudio/bai_tap_tieng_trung_q2_794d6e50.json',
+    textbookUrl: '/api/content/q2/textbook',
+    exercisesUrl: '/api/content/q2/exercises',
     defaultLessonId: 'q2_b13',
   },
   q3: {
@@ -99,8 +105,8 @@ const BOOKS_CONFIG: Record<
     shortTitle: 'Quyển 3',
     label: 'Quyển 3',
     subtitle: '13 Bài Công xưởng & 10 Chuyên ngành',
-    textbookUrl: '/assets/aistudio/giao_trinh_tieng_trung_q3_02b0244c.json',
-    exercisesUrl: '/assets/aistudio/bai_tap_tieng_trung_q3_534a5904.json',
+    textbookUrl: '/api/content/q3/textbook',
+    exercisesUrl: '/api/content/q3/exercises',
     defaultLessonId: 'q3_b01',
   },
 };
@@ -162,6 +168,9 @@ export default function App() {
   });
 
   const activeBookMeta = BOOKS_CONFIG[selectedBook];
+  const auth = useAuth();
+  const authUser = auth.user?.username || null;
+  const bookLocked = selectedBook !== 'q1' && auth.ready && !auth.hasBook(selectedBook);
 
   const [textbookData, setTextbookData] = useState<TextbookDataRaw | null>(null);
   const [exercisesData, setExercisesData] = useState<ExercisesDataRaw | null>(
@@ -302,13 +311,21 @@ export default function App() {
   useEffect(() => {
     let mounted = true;
     const loadAssets = async () => {
+      if (!auth.ready) return; // chờ biết đã đăng nhập hay chưa
+      if (bookLocked) {
+        setTextbookData(null);
+        setExercisesData(null);
+        setLoadError(null);
+        setLoadingData(false);
+        return;
+      }
       setLoadingData(true);
       setLoadError(null);
       try {
         const cfg = BOOKS_CONFIG[selectedBook];
         const [tbRes, exRes] = await Promise.all([
-          fetch(cfg.textbookUrl),
-          fetch(cfg.exercisesUrl),
+          apiFetch(cfg.textbookUrl),
+          apiFetch(cfg.exercisesUrl),
         ]);
         if (!tbRes.ok || !exRes.ok) {
           throw new Error('Không thể tải dữ liệu giáo trình');
@@ -343,15 +360,17 @@ export default function App() {
     return () => {
       mounted = false;
     };
-  }, [selectedBook]);
+  }, [selectedBook, auth.ready, authUser, bookLocked]);
 
   // Preload all 3 books' vocabulary once so compound words (like 介绍 from Q1 when reading Q2/Q3) are always segmented and looked up as complete compound words
   useEffect(() => {
     let active = true;
+    if (!auth.ready) return;
     Promise.all(
       (['q1', 'q2', 'q3'] as BookId[]).map(async (bId) => {
+        if (bId !== 'q1' && !auth.hasBook(bId)) return [] as VocabItem[];
         const cfg = BOOKS_CONFIG[bId];
-        const res = await fetch(cfg.textbookUrl);
+        const res = await apiFetch(cfg.textbookUrl);
         if (!res.ok) return [] as VocabItem[];
         const data = (await res.json()) as TextbookDataRaw;
         return (data.sections || []).flatMap((sec) =>
@@ -372,7 +391,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [auth.ready, authUser]);
 
   // Flatten all vocabulary items in the active book
   const allVocab = useMemo<VocabItem[]>(() => {
@@ -404,7 +423,9 @@ export default function App() {
       });
     };
 
+    const lockedIds = new Set((textbookData?.sections || []).filter((s) => s.locked).map((s) => s.id));
     for (const l of Object.values(LESSON_SUPPLEMENTARY_DATA)) {
+      if (lockedIds.has(l.sectionId)) continue;
       for (const d of l.dialogues) {
         for (const line of d.lines) {
           pushLine(line);
@@ -497,6 +518,7 @@ export default function App() {
   const enrichedLessonsExercises = useMemo<LessonExercisesRaw[]>(() => {
     if (!exercisesData) return [];
     return exercisesData.lessons.map((les) => {
+      if ((les as { locked?: boolean }).locked) return { ...les, exercises: [] };
       const unrolledBase = expandLessonGroupedExercises(les.exercises);
       const supp = SUPPLEMENTARY_EXERCISES_BY_LESSON[les.lesson_id] || [];
       if (supp.length === 0) {
@@ -529,6 +551,66 @@ export default function App() {
     if (!textbookData) return 0;
     return textbookData.sections.filter((s) => completedLessons[s.id]).length;
   }, [textbookData, completedLessons]);
+
+  const lockedFromPage = useMemo<number | null>(() => {
+    const s = textbookData?.sections.find((x) => x.locked);
+    return s ? s.page_start : null;
+  }, [textbookData]);
+
+  // ---- Đồng bộ tiến độ theo tài khoản (đổi thiết bị vẫn nhớ đã học đến đâu)
+  const [syncReady, setSyncReady] = useState(false);
+  const [resumeNote, setResumeNote] = useState<string | null>(null);
+  const restoredFor = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!authUser) {
+      restoredFor.current = null;
+      setSyncReady(false);
+      return;
+    }
+    if (!auth.serverState || restoredFor.current === authUser) return;
+    restoredFor.current = authUser;
+    const st = auth.serverState;
+    if (st.completed) setCompletedLessons((prev) => ({ ...prev, ...st.completed }));
+    if (st.bookmarks && Object.keys(st.bookmarks).length) {
+      setBookmarks((prev) => ({ ...prev, ...st.bookmarks }));
+    }
+    if (st.attempts) setAttempts((prev) => ({ ...prev, ...st.attempts }));
+    const lp = auth.lastPosition;
+    if (lp && auth.user?.books.includes(lp.book)) {
+      setShowPinyinIntro(false);
+      setActiveTab('ebook');
+      setSelectedBook(lp.book);
+      setCurrentPage(lp.page);
+      setSelectedPracticeLessonId(BOOKS_CONFIG[lp.book].defaultLessonId);
+      setResumeNote(`Đã khôi phục tiến độ của bạn: ${BOOKS_CONFIG[lp.book].shortTitle} · trang ${lp.page}`);
+      setTimeout(() => setResumeNote(null), 7000);
+    }
+    setSyncReady(true);
+  }, [authUser, auth.serverState, auth.lastPosition, auth.user]);
+
+  useEffect(() => {
+    if (!authUser || !syncReady) return;
+    const t = setTimeout(() => {
+      apiFetch('/api/state', {
+        method: 'PUT',
+        body: JSON.stringify({ completed: completedLessons, bookmarks, attempts }),
+      }).catch(() => {});
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [authUser, syncReady, completedLessons, bookmarks, attempts]);
+
+  const trackSectionId = currentSection && !currentSection.locked ? currentSection.id : null;
+  useEffect(() => {
+    if (!authUser || !syncReady || !trackSectionId || showPinyinIntro || bookLocked) return;
+    const t = setTimeout(() => {
+      apiFetch('/api/track', {
+        method: 'POST',
+        body: JSON.stringify({ book: selectedBook, sectionId: trackSectionId, page: currentPage }),
+      }).catch(() => {});
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [authUser, syncReady, trackSectionId, selectedBook, currentPage, showPinyinIntro, bookLocked]);
 
   // Audio Playback Orchestration
   const playTrackListFromIndex = useCallback(
@@ -730,6 +812,66 @@ export default function App() {
     });
   }, [allVocab, dictHubQuery, dictHubLessonFilter]);
 
+  if (bookLocked) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#F6F4EE] text-stone-900">
+        <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-white/95 px-3 sm:px-6 py-2.5">
+          <a href="/" className="font-['Fraunces'] text-base sm:text-lg font-bold tracking-tight text-stone-900 hover:text-amber-800">
+            Giáo Trình Hán Ngữ Hoa Sen
+          </a>
+          <div className="flex flex-wrap items-center gap-1 rounded-xl bg-stone-100 p-1">
+            <button
+              onClick={() => {
+                handleSelectBook('q1');
+                setShowPinyinIntro(true);
+              }}
+              className="rounded-lg px-2.5 py-1 text-xs font-bold text-stone-700 hover:bg-stone-200/60"
+            >
+              Phiên Âm
+            </button>
+            {(['q1', 'q2', 'q3'] as BookId[]).map((bId) => (
+              <button
+                key={bId}
+                onClick={() => handleSelectBook(bId)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-bold ${
+                  selectedBook === bId ? 'bg-amber-700 text-white' : 'text-stone-700 hover:bg-stone-200/60'
+                }`}
+              >
+                {BOOKS_CONFIG[bId].shortTitle}
+              </button>
+            ))}
+          </div>
+          <AccountBadge />
+        </header>
+        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+          <div className="rounded-2xl border border-stone-200 bg-white p-6 shadow-xs">
+            <div className="text-center text-xs font-semibold uppercase tracking-widest text-amber-800">
+              Giáo Trình Hán Ngữ Hoa Sen {activeBookMeta.label}
+            </div>
+            <div className="mt-1 text-center text-sm text-stone-600">{activeBookMeta.subtitle}</div>
+            <LockedCard
+              title={`${activeBookMeta.label} dành cho học viên có tài khoản`}
+              subtitle={
+                auth.user
+                  ? `Tài khoản "${auth.user.username}" chưa có quyền học ${activeBookMeta.label}. Liên hệ trung tâm để đăng ký thêm.`
+                  : '3 bài đầu Quyển 1 và phần Phiên Âm học miễn phí. Đăng nhập bằng tài khoản do trung tâm cấp, hoặc liên hệ để mua tài khoản.'
+              }
+            />
+            <div className="mt-2 text-center">
+              <button
+                onClick={() => handleSelectBook('q1')}
+                className="text-sm font-semibold text-amber-800 underline underline-offset-4 hover:text-amber-900"
+              >
+                Học thử miễn phí: 3 bài đầu Quyển 1
+              </button>
+            </div>
+          </div>
+        </main>
+        <AuthModal />
+      </div>
+    );
+  }
+
   if (loadingData) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F6F4EE] p-6">
@@ -806,6 +948,7 @@ export default function App() {
               );
             })}
           </div>
+          <AccountBadge />
         </div>
 
         {/* Zone 2: 4 concise single-line text navigation links */}
@@ -886,6 +1029,13 @@ export default function App() {
           </button>
         ))}
       </div>
+
+      {resumeNote && (
+        <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-lg">
+          {resumeNote}
+        </div>
+      )}
+      <AuthModal />
 
       {/* Main Content Container */}
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-3 sm:px-6 py-4 sm:py-6 space-y-5">
@@ -1104,6 +1254,14 @@ export default function App() {
                       </button>
 
                       {/* Toggle Lesson Completed Button */}
+                      {sec.locked ? (
+                        <span
+                          className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-stone-200 bg-stone-50 text-stone-400"
+                          title="Bài dành cho học viên có tài khoản"
+                        >
+                          <Lock className="h-4 w-4" />
+                        </span>
+                      ) : (
                       <button
                         onClick={() => handleToggleLessonComplete(sec.id)}
                         className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition-colors ${
@@ -1119,6 +1277,7 @@ export default function App() {
                       >
                         <CheckCircle2 className="h-4 w-4" />
                       </button>
+                      )}
                     </div>
                   );
                 })}
@@ -1179,6 +1338,7 @@ export default function App() {
                 sortedVocabKeys={sortedVocabKeys}
                 totalPages={textbookData.total_pages}
                 bookLabel={activeBookMeta.label}
+                lockedFromPage={lockedFromPage}
               />
             </div>
           </div>

@@ -473,9 +473,24 @@ main {
   translate: -50% -50%;
   padding: 0;
   border-radius: 6px 12px 12px 6px;
-  transform-style: preserve-3d;
-  box-shadow: 0 24px 50px rgba(0, 20, 40, 0.55), -5px 0 0 rgba(255, 255, 255, 0.35) inset;
   will-change: transform;
+}
+.fanbook:hover {
+  z-index: 40 !important;
+}
+.fanbook-in {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  box-shadow: 0 22px 46px rgba(0, 20, 40, 0.5), -5px 0 0 rgba(255, 255, 255, 0.35) inset;
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateZ(0);
+  will-change: transform;
+}
+.fanbook:hover .fanbook-in,
+.fanbook:focus-visible .fanbook-in {
+  transform: translateY(-26px) scale(1.22) rotate(0.01deg);
+  box-shadow: 0 40px 70px rgba(0, 20, 40, 0.6), -5px 0 0 rgba(255, 255, 255, 0.45) inset;
 }
 .fanbook img {
   width: 100%;
@@ -1224,17 +1239,15 @@ html.intro-sky .scene {
 /* thu nhỏ nội dung theo chiều cao màn hình để luôn thấy đủ cả trang */
 .landing:not(.lite) .sec > * {
   zoom: var(--z, 1);
-  width: calc(100% / var(--z, 1));
 }
 .landing:not(.lite) .sec > .sec-title {
-  max-width: calc(820px / var(--z, 1));
   margin-bottom: 34px;
 }
-.landing:not(.lite) .gallery {
-  grid-auto-rows: 200px;
-}
-.landing:not(.lite) .g-tall {
-  grid-row: auto;
+/* khung ảnh lớp học: giữ bố cục cũ (ảnh ngang + ảnh dọc), trang dài hơn thì cuộn bên trong */
+.landing:not(.lite) #lophoc {
+  justify-content: flex-start;
+  padding-top: 90px;
+  padding-bottom: 60px;
 }
 .landing:not(.lite) .contact-photo img {
   min-height: 0;

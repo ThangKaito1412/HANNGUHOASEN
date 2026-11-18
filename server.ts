@@ -1,5 +1,7 @@
 import express from 'express';
 import compression from 'compression';
+import { createStore } from './server/store';
+import { createApiRouter } from './server/api';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -194,6 +196,16 @@ async function startServer() {
     const now = Date.now();
     for (const [k, v] of hits) if (v.reset < now) hits.delete(k);
   }, 300_000).unref();
+
+  // Tài khoản học viên, tiến độ, quản trị, nội dung sách theo quyền
+  const store = await createStore();
+  console.log(`Kho dữ liệu: ${store.kind}${store.kind === 'file' ? ' (CHƯA bền vững - hãy đặt DATABASE_URL)' : ''}`);
+  app.use('/api', createApiRouter(store));
+  app.use('/api', (err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (res.headersSent) return next(err);
+    console.error(err);
+    res.status(500).json({ error: 'Lỗi máy chủ, vui lòng thử lại.' });
+  });
 
   // 1. Multi-Persona Mandarin Text-to-Speech Endpoint (Quota-free & Fast)
   app.post('/api/tts', async (req, res) => {

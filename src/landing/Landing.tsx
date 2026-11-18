@@ -63,7 +63,7 @@ function Reveal({children, className = '', delay = 0}: {children: ReactNode; cla
       className={className}
       initial={{opacity: 0, y: 70, rotateX: 14, clipPath: 'circle(8% at 50% 0%)'}}
       whileInView={{opacity: 1, y: 0, rotateX: 0, clipPath: 'circle(160% at 50% 0%)'}}
-      viewport={{once: true, margin: '-3% 0px'}}
+      viewport={{once: LITE, margin: '-3% 0px'}}
       transition={{duration: 1, delay, ease: [0.2, 0.8, 0.2, 1]}}
     >
       {children}
@@ -88,13 +88,26 @@ function Img({src, alt, eager}: {src: string; alt: string; eager?: boolean}) {
   );
 }
 
+const TITLE_ITEM = {
+  hidden: {opacity: 0, y: 34},
+  show: {opacity: 1, y: 0, transition: {duration: 0.9, ease: [0.2, 0.8, 0.2, 1] as [number, number, number, number]}},
+};
+
 function SectionTitle({kicker, title, sub}: {kicker: string; title: string; sub?: string}) {
   return (
-    <Reveal className="sec-title">
-      <span className="kicker">{kicker}</span>
-      <h2>{title}</h2>
-      {sub && <p>{sub}</p>}
-    </Reveal>
+    <motion.div
+      className="sec-title"
+      initial="hidden"
+      whileInView="show"
+      viewport={{once: LITE, margin: '-3% 0px'}}
+      variants={{hidden: {}, show: {transition: {staggerChildren: 0.2}}}}
+    >
+      <motion.span className="kicker" variants={TITLE_ITEM}>
+        {kicker}
+      </motion.span>
+      <motion.h2 variants={TITLE_ITEM}>{title}</motion.h2>
+      {sub && <motion.p variants={TITLE_ITEM}>{sub}</motion.p>}
+    </motion.div>
   );
 }
 
@@ -209,7 +222,7 @@ function About() {
       />
       <div className="features">
         {FEATURES.map((f, i) => (
-          <Reveal key={f.t} delay={i * 0.12} className="card feature">
+          <Reveal key={f.t} delay={0.55 + i * 0.16} className="card feature">
             <div className="ficon">
               <f.icon size={26} />
             </div>
@@ -227,7 +240,7 @@ function Schedule() {
     <section id="lichhoc" className="sec">
       <SectionTitle kicker="Khai giảng" title="Lớp tiếng Trung giao tiếp cấp tốc" sub="Khung giờ buổi tối, thuận tiện cho người đi làm." />
       <div className="sched">
-        <Reveal className="card sched-card">
+        <Reveal className="card sched-card" delay={0.5}>
           <Clock size={26} />
           <h3>Thứ 2 · 4 · 6</h3>
           <ul>
@@ -235,14 +248,14 @@ function Schedule() {
             <li>20h00 – 21h30</li>
           </ul>
         </Reveal>
-        <Reveal className="card sched-card alt" delay={0.15}>
+        <Reveal className="card sched-card alt" delay={0.7}>
           <Clock size={26} />
           <h3>Thứ 7 · Chủ nhật</h3>
           <ul>
             <li>18h00 – 19h30</li>
           </ul>
         </Reveal>
-        <Reveal className="card sched-card addr" delay={0.3}>
+        <Reveal className="card sched-card addr" delay={0.9}>
           <MapPin size={26} />
           <h3>Địa chỉ lớp học</h3>
           <p>{ADDRESS}</p>
@@ -297,11 +310,12 @@ function FanBook({b, i, n, show, w, vh, onOpen}: {b: Book; i: number; n: number;
           : {x: c * 5, y: -c * 2, rotate: c * 2, rotateY: 88, scale: 0.5, opacity: 0}
       }
       transition={{type: 'spring', stiffness: 110, damping: 15, mass: 0.9, delay: show ? 0.12 + i * 0.09 : 0}}
-      whileHover={{scale: 1.07, zIndex: 30}}
       onClick={() => onOpen(b)}
       aria-label={`${b.title} ${b.vol}`}
     >
-      <img src={b.img} alt={`${b.title} ${b.vol}`} draggable={false} />
+      <div className="fanbook-in">
+        <img src={b.img} alt={`${b.title} ${b.vol}`} draggable={false} />
+      </div>
       <motion.span className="fancap" animate={{opacity: show ? 1 : 0}} transition={{delay: show ? 0.9 : 0}}>
         {b.kind === 'gt' ? 'Giáo trình' : 'Luyện viết'} · {b.vol}
       </motion.span>
@@ -421,7 +435,7 @@ function EbookCTA() {
   ];
   return (
     <section id="sachdientu" className="sec">
-      <Reveal className="card ebook">
+      <Reveal className="card ebook" delay={0.3}>
         <div className="ebook-copy">
           <span className="kicker">Sách điện tử</span>
           <h2>Học mọi lúc với sách điện tử tương tác</h2>
@@ -459,8 +473,8 @@ function Gallery() {
             className={'gitem ' + p.cls}
             initial={LITE ? {opacity: 0, scale: 0.92} : {opacity: 0, scale: 0.9, clipPath: 'circle(6% at 50% 50%)'}}
             whileInView={LITE ? {opacity: 1, scale: 1} : {opacity: 1, scale: 1, clipPath: 'circle(100% at 50% 50%)'}}
-            viewport={{once: true, margin: LITE ? '0px 0px -8% 0px' : '-10% 0px'}}
-            transition={LITE ? {duration: 0.45, delay: i * 0.06} : {duration: 1.1, delay: (i % 3) * 0.12, ease: [0.2, 0.8, 0.2, 1]}}
+            viewport={{once: LITE, margin: LITE ? '0px 0px -8% 0px' : '-3% 0px'}}
+            transition={LITE ? {duration: 0.45, delay: i * 0.06} : {duration: 1.1, delay: 0.45 + i * 0.14, ease: [0.2, 0.8, 0.2, 1]}}
             onClick={() => setOpen(p)}
             aria-label={p.alt}
           >
@@ -480,7 +494,7 @@ function Contact() {
     <section id="lienhe" className="sec contact">
       <SectionTitle kicker="Liên hệ" title="Đăng ký ngay để không bỏ lỡ lớp học" sub="Nhắn Zalo hoặc gọi điện để được tư vấn lớp phù hợp." />
       <div className="contact-grid">
-        <Reveal className="card contact-card">
+        <Reveal className="card contact-card" delay={0.5}>
           <a href={PHONE_LINK} className="phone">
             <Phone size={26} /> {PHONE}
           </a>
@@ -499,7 +513,7 @@ function Contact() {
             Chỉ đường trên Google Maps →
           </a>
         </Reveal>
-        <Reveal className="contact-photo" delay={0.15}>
+        <Reveal className="contact-photo" delay={0.75}>
           <Img src="/site/t1.jpg" alt="Bảng hiệu Hán Ngữ Hoa Sen" eager={LITE} />
         </Reveal>
       </div>

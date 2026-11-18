@@ -38,6 +38,7 @@ import {
   SUPPLEMENTARY_EXERCISES_BY_LESSON,
 } from '../data/dialoguesAndGrammar';
 import { segmentChineseSentence } from '../utils/visualDictionary';
+import { LockedCard } from '../auth/LockedBook';
 import { PlayTrackItem } from '../utils/audioEngine';
 import {
   evaluateExerciseAnswerLocal,
@@ -86,6 +87,8 @@ interface InteractiveBookReaderProps {
   sortedVocabKeys: string[];
   totalPages?: number;
   bookLabel?: string;
+  /** Từ trang này trở đi là nội dung bị khóa (chưa có quyền). */
+  lockedFromPage?: number | null;
 }
 
 interface PageContentData {
@@ -135,6 +138,7 @@ export const InteractiveBookReader: React.FC<InteractiveBookReaderProps> = ({
   sortedVocabKeys,
   totalPages = 98,
   bookLabel = 'Quyển 1',
+  lockedFromPage = null,
 }) => {
   const [turningState, setTurningState] = useState<{
     dir: 'next' | 'prev';
@@ -274,6 +278,18 @@ export const InteractiveBookReader: React.FC<InteractiveBookReaderProps> = ({
           (s) => pageNum >= s.page_start && pageNum <= s.page_end
         ) || sections[0];
 
+      if (lockedFromPage != null && pageNum >= lockedFromPage) {
+        return {
+          pageNumber: pageNum,
+          primarySection,
+          lessonMeta: undefined,
+          vocabItems: [],
+          dialogueLines: [],
+          grammarItems: [],
+          pageExercises: [],
+        };
+      }
+
       const lessonMeta: LessonSupplementaryContent = LESSON_SUPPLEMENTARY_DATA[
         primarySection.id
       ] || {
@@ -333,7 +349,7 @@ export const InteractiveBookReader: React.FC<InteractiveBookReaderProps> = ({
         pageExercises,
       };
     };
-  }, [sections, allExercisesWithMeta, exercisesByLessonId]);
+  }, [sections, allExercisesWithMeta, exercisesByLessonId, lockedFromPage]);
 
   const triggerPageFlip = (
     targetPage: number,
@@ -784,6 +800,24 @@ export const InteractiveBookReader: React.FC<InteractiveBookReaderProps> = ({
     data: PageContentData,
     side: 'left' | 'right' | 'single'
   ) => {
+    if (lockedFromPage != null && data.pageNumber >= lockedFromPage) {
+      return (
+        <div
+          className={`relative flex h-full flex-col items-center justify-center bg-[#FCFBF7] p-6 text-stone-900 ${
+            isFullScreen ? 'min-h-[80vh]' : 'min-h-[760px] sm:min-h-[860px]'
+          } ${
+            side === 'left'
+              ? 'xl:rounded-l-2xl xl:border-r xl:border-stone-300/80'
+              : side === 'right'
+              ? 'xl:rounded-r-2xl'
+              : 'xl:rounded-2xl'
+          }`}
+        >
+          <div className="mb-1 text-xs font-semibold text-stone-500">Trang {data.pageNumber}</div>
+          <LockedCard title="Nội dung dành cho học viên" />
+        </div>
+      );
+    }
     const pageAudioList = getAudioItemsForPage(data);
     const startingSections = sections.filter(
       (s) => s.page_start === data.pageNumber

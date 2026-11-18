@@ -20,6 +20,8 @@ export interface TextbookSectionRaw {
   page_end: number;
   vocab_count: number;
   vocabulary: VocabItem[];
+  /** true = bài bị khóa (chưa có quyền), nội dung đã được máy chủ lược bỏ */
+  locked?: boolean;
 }
 
 export interface TextbookDataRaw {
