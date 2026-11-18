@@ -165,9 +165,33 @@ async function fetchMandarinAudioBase64(
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.use(express.json({ limit: '2mb' }));
+
+  // Behind a proxy (Render/Cloud Run): use real client IP for rate limiting
+  app.set('trust proxy', 1);
+
+  // Simple per-IP rate limit for API routes (protects the Gemini quota)
+  const hits = new Map<string, { n: number; reset: number }>();
+  app.use('/api', (req, res, next) => {
+    const now = Date.now();
+    const ip = req.ip || 'unknown';
+    const rec = hits.get(ip);
+    if (!rec || rec.reset < now) {
+      hits.set(ip, { n: 1, reset: now + 60_000 });
+      return next();
+    }
+    if (++rec.n > 60) {
+      res.status(429).json({ error: 'Too many requests, please slow down.' });
+      return;
+    }
+    next();
+  });
+  setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of hits) if (v.reset < now) hits.delete(k);
+  }, 300_000).unref();
 
   // 1. Multi-Persona Mandarin Text-to-Speech Endpoint (Quota-free & Fast)
   app.post('/api/tts', async (req, res) => {
