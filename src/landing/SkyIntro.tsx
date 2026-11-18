@@ -14,7 +14,7 @@ function mulberry32(seed: number) {
 function Cloud({x, y, w, seed}: {x: number; y: number; w: number; seed: number}) {
   const blobs = useMemo(() => {
     const r = mulberry32(seed);
-    return Array.from({length: 7}, (_, i) => ({
+    return Array.from({length: 5}, (_, i) => ({
       l: 8 + r() * 60,
       t: 20 + r() * 34 + (i % 2) * 6,
       s: 34 + r() * 36,
@@ -22,7 +22,7 @@ function Cloud({x, y, w, seed}: {x: number; y: number; w: number; seed: number})
   }, [seed]);
   return (
     <div className="cloud" style={{left: x + '%', top: y + '%', width: w + 'vw', height: w * 0.42 + 'vw'}}>
-      {blobs.map((b, i) => (
+      {blobs.slice(0, 3).map((b, i) => (
         <i key={'s' + i} className="blob shade" style={{left: b.l + '%', top: b.t + 9 + '%', width: b.s + '%', paddingBottom: b.s + '%'}} />
       ))}
       {blobs.map((b, i) => (
@@ -53,7 +53,8 @@ function CloudLayer({i, t, lite}: {i: number; t: MotionValue<number>; lite?: boo
     }));
   }, [i, L, lite]);
   const scale = useTransform(t, [0, 0.88], [1, L.scale]);
-  const y = useTransform(t, [0, 0.88], ['0vh', `-${L.rise}vh`]);
+  const vhPx = typeof window === 'undefined' ? 800 : window.innerHeight;
+  const y = useTransform(t, [0, 0.88], [0, (-L.rise * vhPx) / 100]);
   const START = [1, 0.9, 0.45, 0.12, 0];
   const RAMP = [0.02, 0.12, 0.22, 0.32, 0.42];
   const opacity = useTransform(t, [0, RAMP[i], L.fade[0], L.fade[1]], [START[i], 1, 1, 0]);

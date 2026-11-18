@@ -567,11 +567,16 @@ export default function Landing() {
     const prev = html.style.overflow;
     html.style.overflow = 'hidden';
     anim.current = animate(descent, 1, {duration: LITE ? 5 : 7.5, ease: [0.45, 0.05, 0.4, 1], onComplete: finish});
-    const unsub = descent.on('change', (v) => v > 0.86 && setReady(true));
+    html.classList.add('intro-sky');
+    const unsub = descent.on('change', (v) => {
+      if (v > 0.5) html.classList.remove('intro-sky');
+      if (v > 0.86) setReady(true);
+    });
     const key = (e: KeyboardEvent) => e.key === 'Escape' && skip();
     window.addEventListener('keydown', key);
     return () => {
       html.style.overflow = prev;
+      html.classList.remove('intro-sky');
       unsub();
       window.removeEventListener('keydown', key);
     };
@@ -614,11 +619,11 @@ export default function Landing() {
     return () => io.disconnect();
   }, []);
 
-  // Mobile: cuộn theo từng trang (snap)
+  // Cuộn theo từng khung (snap)
   useEffect(() => {
-    if (!LITE) return;
-    document.documentElement.classList.add('paged');
-    return () => document.documentElement.classList.remove('paged');
+    const cls = LITE ? 'paged' : 'paged-d';
+    document.documentElement.classList.add(cls);
+    return () => document.documentElement.classList.remove(cls);
   }, []);
 
   return (

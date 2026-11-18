@@ -223,8 +223,8 @@ main {
   background: var(--glass);
   border: 1px solid var(--glass-b);
   border-radius: 26px;
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
   box-shadow: 0 20px 60px rgba(0, 25, 45, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 .link {
@@ -320,7 +320,6 @@ main {
 .hero-lotus {
   display: flex;
   justify-content: center;
-  filter: drop-shadow(0 30px 40px rgba(0, 40, 60, 0.35));
 }
 .hero-lotus svg {
   width: min(520px, 90%);
@@ -833,11 +832,13 @@ main {
   position: absolute;
   inset: -20%;
   background: conic-gradient(from 195deg at 80% 0%, transparent 0 4deg, rgba(255, 244, 205, 0.28) 6deg, transparent 10deg, transparent 16deg, rgba(255, 244, 205, 0.22) 19deg, transparent 24deg, transparent 31deg, rgba(255, 244, 205, 0.2) 34deg, transparent 40deg, transparent 50deg, rgba(255, 244, 205, 0.16) 54deg, transparent 60deg);
-  mix-blend-mode: screen;
 }
 .cloud-layer {
   position: absolute;
   inset: 0;
+  contain: layout paint;
+  backface-visibility: hidden;
+  transform: translateZ(0);
   transform-origin: 50% 55%;
   will-change: transform, opacity;
 }
@@ -864,8 +865,8 @@ main {
   right: 0;
   top: 34%;
   text-align: center;
-  color: #fff;
-  text-shadow: 0 4px 30px rgba(10, 60, 120, 0.5);
+  color: #0a2c66;
+  text-shadow: 0 0 14px rgba(255, 255, 255, 0.95), 0 0 34px rgba(255, 255, 255, 0.9), 0 2px 2px rgba(255, 255, 255, 0.7);
 }
 .sky-title span {
   display: block;
@@ -1195,4 +1196,38 @@ html.paged {
 }
 .landing.lite .cloud-layer {
   will-change: auto;
+}
+
+/* Ẩn ao trong lúc đang ở trên trời (không vẽ thừa) */
+html.intro-sky .scene {
+  visibility: hidden;
+}
+.pond-canvas {
+  contain: strict;
+}
+
+/* ---------- Cuộn từng khung (desktop) ---------- */
+html.paged-d {
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+}
+.landing:not(.lite) .hero,
+.landing:not(.lite) .sec {
+  min-height: 100vh;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.landing:not(.lite) .hero {
+  display: grid;
+}
+.landing:not(.lite) .sec {
+  width: 100%;
+}
+.landing:not(.lite) .books {
+  scroll-snap-align: start;
+}
+.landing:not(.lite) .foot {
+  scroll-snap-align: end;
 }

@@ -40,7 +40,7 @@ function PondCanvas() {
     let bubbles: Bubble[] = [];
 
     const resize = () => {
-      dpr = LITE ? 1 : Math.min(window.devicePixelRatio || 1, 1.75);
+      dpr = LITE ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
       W = window.innerWidth;
       H = window.innerHeight;
       canvas.width = Math.floor(W * dpr);
@@ -116,8 +116,22 @@ function PondCanvas() {
 
     let last = performance.now();
     let lastDraw = 0;
+    let avg = 16;
+    let lowQ = false;
+    let prevT = 0;
     const frame = (now: number) => {
       if (!running) return;
+      if (document.documentElement.classList.contains('intro-sky')) {
+        last = now;
+        if (!reduce) raf = requestAnimationFrame(frame);
+        return;
+      }
+      if (prevT) {
+        avg = avg * 0.92 + Math.min(80, now - prevT) * 0.08;
+        if (avg > 26) lowQ = true;
+        else if (avg < 19) lowQ = false;
+      }
+      prevT = now;
       if (LITE && now - lastDraw < 30) {
         raf = requestAnimationFrame(frame);
         return;
@@ -130,7 +144,7 @@ function PondCanvas() {
 
       // sun glints under water
       ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < (LITE ? 0 : 5); i++) {
+      for (let i = 0; i < (LITE || lowQ ? 0 : 3); i++) {
         const gx = (Math.sin(t * 0.07 + i * 1.7) * 0.5 + 0.5) * W;
         const gy = (Math.cos(t * 0.05 + i * 2.3) * 0.5 + 0.5) * H;
         const gr = Math.max(W, H) * (0.22 + 0.05 * Math.sin(t * 0.3 + i));
@@ -188,7 +202,7 @@ function PondCanvas() {
           mul = 1.3;
         }
         stepKoi(f, dt, desired, mul, now);
-        drawKoi(ctx, f);
+        drawKoi(ctx, f, lowQ);
       }
 
       // petals

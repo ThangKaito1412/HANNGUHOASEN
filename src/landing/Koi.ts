@@ -140,7 +140,7 @@ function smoothClosed(ctx: CanvasRenderingContext2D, pts: Pt[]) {
   ctx.closePath();
 }
 
-function fin(ctx: CanvasRenderingContext2D, x: number, y: number, ang: number, len: number, wid: number, color: string, alpha: number) {
+function fin(ctx: CanvasRenderingContext2D, x: number, y: number, ang: number, len: number, wid: number, color: string, alpha: number, rays = true) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(ang);
@@ -155,6 +155,10 @@ function fin(ctx: CanvasRenderingContext2D, x: number, y: number, ang: number, l
   ctx.bezierCurveTo(len * 0.85, wid * 0.1, len * 0.75, wid * 0.7, len * 0.3, wid);
   ctx.bezierCurveTo(len * 0.15, wid * 0.7, 0, wid * 0.3, 0, 0);
   ctx.fill();
+  if (!rays) {
+    ctx.restore();
+    return;
+  }
   // fin rays
   ctx.globalAlpha = alpha * 0.35;
   ctx.strokeStyle = 'rgba(255,255,255,0.9)';
@@ -197,7 +201,7 @@ export function stepKoi(f: Koi, dt: number, desiredAng: number, speedMul: number
   }
 }
 
-export function drawKoi(ctx: CanvasRenderingContext2D, f: Koi) {
+export function drawKoi(ctx: CanvasRenderingContext2D, f: Koi, lowQ = false) {
   const n = f.trail.length;
   const S = f.size;
 
@@ -246,9 +250,11 @@ export function drawKoi(ctx: CanvasRenderingContext2D, f: Koi) {
   smoothClosed(ctx, outline);
   ctx.fillStyle = 'rgba(0,28,38,0.16)';
   ctx.fill();
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = 'rgba(0,28,38,0.07)';
-  ctx.stroke();
+  if (!lowQ) {
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(0,28,38,0.07)';
+    ctx.stroke();
+  }
   ctx.restore();
 
   const tailAng = Math.atan2(tdir.y, tdir.x);
@@ -263,7 +269,7 @@ export function drawKoi(ctx: CanvasRenderingContext2D, f: Koi) {
     const back = Math.atan2(spine[idx + 2].y - spine[idx - 1].y, spine[idx + 2].x - spine[idx - 1].x);
     for (const s of [-1, 1]) {
       const ang = back + s * (base + flap * Math.sin(t * 3 + f.phase + (s > 0 ? 0 : 1.2)));
-      fin(ctx, p.x + nm.x * w * 0.8 * s, p.y + nm.y * w * 0.8 * s, ang, len, wd, f.fin, alpha);
+      fin(ctx, p.x + nm.x * w * 0.8 * s, p.y + nm.y * w * 0.8 * s, ang, len, wd, f.fin, alpha, !lowQ);
     }
   };
   pairFin(5, S * 2.0, S * 0.55, 0.85, 0.22, 0.7);
@@ -272,9 +278,9 @@ export function drawKoi(ctx: CanvasRenderingContext2D, f: Koi) {
   // 5. vây đuôi: 3 thùy mềm, đung đưa trễ pha so với thân
   const tx = spine[n - 1].x;
   const ty = spine[n - 1].y;
-  fin(ctx, tx, ty, tailAng + 0.55 + sway * 0.5, S * 3.4, S * 1.1, f.fin, 0.72);
-  fin(ctx, tx, ty, tailAng - 0.55 + sway * 0.5, S * 3.4, S * 1.1, f.fin, 0.72);
-  fin(ctx, tx, ty, tailAng + sway * 0.55, S * 4.1, S * 1.2, f.fin, 0.8);
+  fin(ctx, tx, ty, tailAng + 0.55 + sway * 0.5, S * 3.4, S * 1.1, f.fin, 0.72, !lowQ);
+  fin(ctx, tx, ty, tailAng - 0.55 + sway * 0.5, S * 3.4, S * 1.1, f.fin, 0.72, !lowQ);
+  fin(ctx, tx, ty, tailAng + sway * 0.55, S * 4.1, S * 1.2, f.fin, 0.8, !lowQ);
 
   // 6. thân: màu nền + đốm (cắt theo thân) + bóng khối
   ctx.save();
@@ -323,7 +329,7 @@ export function drawKoi(ctx: CanvasRenderingContext2D, f: Koi) {
   // vảy: các đường cong mảnh
   ctx.strokeStyle = 'rgba(0,0,0,0.07)';
   ctx.lineWidth = 0.8;
-  for (let i = 3; i < n - 4; i += 2) {
+  for (let i = 3; i < n - 4 && !lowQ; i += 2) {
     const p = spine[i];
     const nm = norm[i];
     const w = wid(i);
