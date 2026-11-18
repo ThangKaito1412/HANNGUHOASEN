@@ -9,9 +9,11 @@ const LAYERS: {angles: number[]; scale: number; fill: string; delay: number}[] =
   {angles: [-20, 0, 20], scale: 0.9, fill: 'url(#petalFront)', delay: 0.75},
 ];
 
-function Defs() {
+/** Gradient dùng chung: đặt đúng 1 lần ở gốc trang (giảm hàng trăm bản sao trong DOM). */
+export function GlobalDefs() {
   return (
-    <defs>
+    <svg width="0" height="0" style={{position: 'absolute'}} aria-hidden="true">
+      <defs>
       <linearGradient id="petalBack" x1="0" y1="0" x2="0" y2="-1">
         <stop offset="0" stopColor="#f6a8c0" />
         <stop offset="1" stopColor="#fde1ea" />
@@ -34,7 +36,8 @@ function Defs() {
         <stop offset="0" stopColor="#3fb09a" />
         <stop offset="1" stopColor="#14675c" />
       </radialGradient>
-    </defs>
+      </defs>
+    </svg>
   );
 }
 
@@ -42,7 +45,6 @@ function Defs() {
 export function LotusBloom({className}: {className?: string}) {
   return (
     <svg viewBox="0 0 400 300" className={className} role="img" aria-label="Hoa sen">
-      <Defs />
       <ellipse cx="200" cy="268" rx="150" ry="16" fill="rgba(0,50,60,0.25)" />
       <g transform="translate(200 262)">
         {LAYERS.map((layer, li) =>
@@ -82,7 +84,6 @@ export function LotusBloom({className}: {className?: string}) {
 export function LotusStatic() {
   return (
     <svg viewBox="0 0 400 300" aria-hidden="true">
-      <Defs />
       <g transform="translate(200 262)">
         {LAYERS.map((layer, li) =>
           layer.angles.map((a, i) => (
@@ -102,17 +103,18 @@ const a1 = (-14 * Math.PI) / 180;
 const a2 = (14 * Math.PI) / 180;
 const PAD_PATH = `M0 0 L${R * Math.cos(a1)} ${R * Math.sin(a1)} A${R} ${R} 0 1 0 ${R * Math.cos(a2)} ${R * Math.sin(a2)} Z`;
 
+const VEINS = Array.from({length: 9}, (_, i) => {
+  const a = ((18 + i * 36) * Math.PI) / 180;
+  return `M0 0L${(R * 0.9 * Math.cos(a)).toFixed(1)} ${(R * 0.9 * Math.sin(a)).toFixed(1)}`;
+}).join('');
+
 export function LilyPad({rot, tone}: {rot: number; tone: number}) {
   return (
     <svg viewBox="-56 -56 112 112" aria-hidden="true">
-      <Defs />
       <g transform={`rotate(${rot})`}>
         <path d={PAD_PATH} transform="translate(5 7)" fill="rgba(0,40,40,0.22)" />
         <path d={PAD_PATH} fill={tone > 0.5 ? 'url(#padGrad)' : 'url(#padGrad2)'} stroke="rgba(190,255,210,0.35)" strokeWidth="1" />
-        {Array.from({length: 9}, (_, i) => {
-          const a = ((18 + i * 36) * Math.PI) / 180;
-          return <line key={i} x1="0" y1="0" x2={R * 0.9 * Math.cos(a)} y2={R * 0.9 * Math.sin(a)} stroke="rgba(200,255,220,0.28)" strokeWidth="0.8" />;
-        })}
+        <path d={VEINS} stroke="rgba(200,255,220,0.28)" strokeWidth="0.8" fill="none" />
       </g>
     </svg>
   );

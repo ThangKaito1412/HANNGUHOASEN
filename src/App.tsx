@@ -762,12 +762,9 @@ export default function App() {
         {/* Zone 1: Brand Wordmark + Book Selector (Quyển 1, 2, 3) - Responsive on mobile so Quyển 3 never overflows */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 w-full md:w-auto">
           <a
-            href="#top"
-            onClick={(e) => {
-              e.preventDefault();
-              setActiveTab('ebook');
-            }}
-            className="font-['Fraunces'] text-base sm:text-lg font-bold tracking-tight text-stone-900 whitespace-nowrap shrink-0"
+            href="/"
+            title="Về trang chủ Hán Ngữ Hoa Sen"
+            className="font-['Fraunces'] text-base sm:text-lg font-bold tracking-tight text-stone-900 whitespace-nowrap shrink-0 hover:text-amber-800 transition-colors"
           >
             Giáo Trình Hán Ngữ Hoa Sen
           </a>

@@ -96,15 +96,16 @@ export function makeKoi(i: number, W: number, H: number, scale: number, r: () =>
   const size = (11 + r() * 6) * scale;
   const x = r() * W;
   const y = r() * H;
+  const ang = r() * Math.PI * 2;
   return {
     x,
     y,
-    ang: r() * Math.PI * 2,
+    ang,
     size,
     speed: 0.65 + r() * 0.5,
     spd: 1,
     turn: 0,
-    trail: Array.from({length: SEGMENTS}, () => ({x, y})),
+    trail: Array.from({length: SEGMENTS}, (_, k) => ({x: x - Math.cos(ang) * size * 0.58 * k, y: y - Math.sin(ang) * size * 0.58 * k})),
     phase: r() * 10,
     wph: r() * 10,
     base: v.base,

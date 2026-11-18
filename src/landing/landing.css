@@ -435,12 +435,11 @@ main {
 /* Books (sticky fan-out) */
 .books {
   position: relative;
-  height: 260vh;
+  height: 100vh;
 }
 .books-stage {
-  position: sticky;
-  top: 0;
-  height: 100svh;
+  position: relative;
+  height: 100%;
   overflow: hidden;
   perspective: 1400px;
 }
@@ -1206,18 +1205,15 @@ html.intro-sky .scene {
   contain: strict;
 }
 
-/* ---------- Cuộn từng khung (desktop) ---------- */
-html.paged-d {
-  scroll-snap-type: y mandatory;
-  scroll-behavior: smooth;
-}
+/* ---------- Mỗi mục = một trang vừa màn hình (desktop) ---------- */
 .landing:not(.lite) .hero,
 .landing:not(.lite) .sec {
   min-height: 100vh;
-  scroll-snap-align: start;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding-top: 74px;
+  padding-bottom: 22px;
 }
 .landing:not(.lite) .hero {
   display: grid;
@@ -1225,9 +1221,43 @@ html.paged-d {
 .landing:not(.lite) .sec {
   width: 100%;
 }
-.landing:not(.lite) .books {
-  scroll-snap-align: start;
+/* thu nhỏ nội dung theo chiều cao màn hình để luôn thấy đủ cả trang */
+.landing:not(.lite) .sec > * {
+  zoom: var(--z, 1);
+  width: calc(100% / var(--z, 1));
 }
-.landing:not(.lite) .foot {
-  scroll-snap-align: end;
+.landing:not(.lite) .sec > .sec-title {
+  max-width: calc(820px / var(--z, 1));
+  margin-bottom: 34px;
+}
+.landing:not(.lite) .gallery {
+  grid-auto-rows: 200px;
+}
+.landing:not(.lite) .g-tall {
+  grid-row: auto;
+}
+.landing:not(.lite) .contact-photo img {
+  min-height: 0;
+  height: 360px;
+}
+@media (max-width: 1000px) {
+  .landing:not(.lite) .sec > * {
+    zoom: 1;
+    width: auto;
+  }
+}
+.dots {
+  display: flex;
+}
+@media (min-width: 821px) {
+  .dots {
+    right: 18px;
+  }
+  .dots a {
+    width: 9px;
+    height: 9px;
+  }
+  .dots a.on {
+    height: 26px;
+  }
 }

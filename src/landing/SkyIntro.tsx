@@ -11,25 +11,47 @@ function mulberry32(seed: number) {
   };
 }
 
-function Cloud({x, y, w, seed}: {x: number; y: number; w: number; seed: number}) {
-  const blobs = useMemo(() => {
-    const r = mulberry32(seed);
-    return Array.from({length: 5}, (_, i) => ({
-      l: 8 + r() * 60,
-      t: 20 + r() * 34 + (i % 2) * 6,
-      s: 34 + r() * 36,
+/** Vẽ sẵn vài đám mây thành ảnh (1 lần): mỗi đám mây chỉ còn là 1 ảnh, GPU kéo giãn rất nhẹ. */
+let SPRITES: string[] | null = null;
+function cloudSprites(): string[] {
+  if (SPRITES) return SPRITES;
+  SPRITES = [];
+  if (typeof document === 'undefined') return SPRITES;
+  for (let v = 0; v < 4; v++) {
+    const r = mulberry32(900 + v * 13);
+    const W = 640;
+    const H = 280;
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    const g = c.getContext('2d')!;
+    const puffs = Array.from({length: 9}, (_, i) => ({
+      x: 90 + (i / 8) * (W - 180) + (r() - 0.5) * 40,
+      y: H * 0.55 + (r() - 0.5) * 50 - Math.sin((i / 8) * Math.PI) * 38,
+      r: 62 + r() * 54,
     }));
-  }, [seed]);
-  return (
-    <div className="cloud" style={{left: x + '%', top: y + '%', width: w + 'vw', height: w * 0.42 + 'vw'}}>
-      {blobs.slice(0, 3).map((b, i) => (
-        <i key={'s' + i} className="blob shade" style={{left: b.l + '%', top: b.t + 9 + '%', width: b.s + '%', paddingBottom: b.s + '%'}} />
-      ))}
-      {blobs.map((b, i) => (
-        <i key={i} className="blob" style={{left: b.l + '%', top: b.t + '%', width: b.s + '%', paddingBottom: b.s + '%'}} />
-      ))}
-    </div>
-  );
+    const draw = (dy: number, inner: string, mid: string, scale: number) => {
+      for (const p of puffs) {
+        const grd = g.createRadialGradient(p.x, p.y + dy, 0, p.x, p.y + dy, p.r * scale);
+        grd.addColorStop(0, inner);
+        grd.addColorStop(0.5, mid);
+        grd.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = grd;
+        g.beginPath();
+        g.arc(p.x, p.y + dy, p.r * scale, 0, 6.3);
+        g.fill();
+      }
+    };
+    draw(26, 'rgba(150,188,232,0.5)', 'rgba(150,188,232,0.25)', 1); // bóng dưới
+    draw(0, 'rgba(255,255,255,0.98)', 'rgba(255,255,255,0.8)', 1);
+    SPRITES.push(c.toDataURL('image/png'));
+  }
+  return SPRITES;
+}
+
+function Cloud({x, y, w, seed}: {x: number; y: number; w: number; seed: number}) {
+  const sprites = useMemo(cloudSprites, []);
+  return <img className="cloud-img" src={sprites[seed % sprites.length]} alt="" draggable={false} style={{left: x + '%', top: y + '%', width: w + 'vw'}} />;
 }
 
 // layer 0 = xa nhất ... 4 = gần camera nhất

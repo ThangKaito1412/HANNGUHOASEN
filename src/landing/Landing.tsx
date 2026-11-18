@@ -2,7 +2,7 @@ import {useEffect, useRef, useState, type ReactNode} from 'react';
 import {AnimatePresence, animate, motion, useMotionValue, useScroll, useTransform, type MotionValue} from 'motion/react';
 import {BookOpen, Clock, Factory, MapPin, Menu, MessageCircle, Phone, Sparkles, Users, X, Headphones, Search, PenLine} from 'lucide-react';
 import PondScene from './PondScene';
-import {LotusBloom} from './Lotus';
+import {LotusBloom, GlobalDefs} from './Lotus';
 import SkyIntro from './SkyIntro';
 import {LITE} from './lite';
 import './landing.css';
@@ -61,9 +61,9 @@ function Reveal({children, className = '', delay = 0}: {children: ReactNode; cla
   return (
     <motion.div
       className={className}
-      initial={{opacity: 0, y: 70, rotateX: 14, clipPath: 'circle(8% at 50% 100%)'}}
-      whileInView={{opacity: 1, y: 0, rotateX: 0, clipPath: 'circle(140% at 50% 100%)'}}
-      viewport={{once: true, margin: '-12% 0px'}}
+      initial={{opacity: 0, y: 70, rotateX: 14, clipPath: 'circle(8% at 50% 0%)'}}
+      whileInView={{opacity: 1, y: 0, rotateX: 0, clipPath: 'circle(160% at 50% 0%)'}}
+      viewport={{once: true, margin: '-3% 0px'}}
       transition={{duration: 1, delay, ease: [0.2, 0.8, 0.2, 1]}}
     >
       {children}
@@ -281,28 +281,28 @@ function layoutFor(w: number, vh: number, n: number) {
   };
 }
 
-function FanBook({b, i, n, t, w, vh, onOpen}: {b: Book; i: number; n: number; t: MotionValue<number>; w: number; vh: number; onOpen: (b: Book) => void}) {
+function FanBook({b, i, n, show, w, vh, onOpen}: {b: Book; i: number; n: number; show: boolean; w: number; vh: number; onOpen: (b: Book) => void}) {
   const L = layoutFor(w, vh, n);
   const p = L.pos(i);
   const c = i - (n - 1) / 2;
-  const x = useTransform(t, [0.04, 0.5], [c * 5, p.x]);
-  const y = useTransform(t, [0.04, 0.5], [-c * 2, p.y]);
-  const rotate = useTransform(t, [0.04, 0.5], [c * 2, p.r]);
-  const rotateY = useTransform(t, [0, 0.22, 0.5], [88, 50, 0]);
-  const scale = useTransform(t, [0, 0.12], [0.5, 1]);
-  const cap = useTransform(t, [0.46, 0.62], [0, 1]);
   const width = L.h * b.ratio;
   return (
     <motion.button
       className="fanbook"
-      style={{x, y, rotate, rotateY, scale, width, height: L.h, zIndex: 10 - Math.abs(Math.round(c))}}
-      whileHover={{scale: 1.08, y: p.y - 14, zIndex: 30}}
-      transition={{type: 'spring', stiffness: 220, damping: 18}}
+      style={{width, height: L.h, zIndex: 10 - Math.abs(Math.round(c))}}
+      initial={false}
+      animate={
+        show
+          ? {x: p.x, y: p.y, rotate: p.r, rotateY: 0, scale: 1, opacity: 1}
+          : {x: c * 5, y: -c * 2, rotate: c * 2, rotateY: 88, scale: 0.5, opacity: 0}
+      }
+      transition={{type: 'spring', stiffness: 110, damping: 15, mass: 0.9, delay: show ? 0.12 + i * 0.09 : 0}}
+      whileHover={{scale: 1.07, zIndex: 30}}
       onClick={() => onOpen(b)}
       aria-label={`${b.title} ${b.vol}`}
     >
       <img src={b.img} alt={`${b.title} ${b.vol}`} draggable={false} />
-      <motion.span className="fancap" style={{opacity: cap}}>
+      <motion.span className="fancap" animate={{opacity: show ? 1 : 0}} transition={{delay: show ? 0.9 : 0}}>
         {b.kind === 'gt' ? 'Giáo trình' : 'Luyện viết'} · {b.vol}
       </motion.span>
     </motion.button>
@@ -374,34 +374,36 @@ function BooksLite() {
 
 function BooksFan() {
   const ref = useRef<HTMLElement>(null);
-  const {scrollYProgress} = useScroll({target: ref, offset: ['start start', 'end end']});
+  const [show, setShow] = useState(false);
   const [w, setW] = useState(typeof window === 'undefined' ? 1280 : window.innerWidth || 1280);
   const [vh, setVh] = useState(typeof window === 'undefined' ? 800 : window.innerHeight || 800);
   const [open, setOpen] = useState<Book | null>(null);
   useEffect(() => {
-    const r = () => setW(window.innerWidth || document.documentElement.clientWidth || 1280);
-    const rh = () => setVh(window.innerHeight || document.documentElement.clientHeight || 800);
+    const r = () => {
+      setW(window.innerWidth || 1280);
+      setVh(window.innerHeight || 800);
+    };
     r();
-    rh();
-    window.addEventListener('resize', rh);
     window.addEventListener('resize', r);
+    // sách bung ra mỗi khi trang này vào màn hình, xếp lại khi rời đi
+    const io = new IntersectionObserver(([e]) => setShow(e.isIntersecting), {threshold: 0.55});
+    if (ref.current) io.observe(ref.current);
     return () => {
       window.removeEventListener('resize', r);
-      window.removeEventListener('resize', rh);
+      io.disconnect();
     };
   }, []);
-  const head = useTransform(scrollYProgress, [0, 0.1, 0.9, 1], [0, 1, 1, 0.6]);
   return (
     <section id="giaotrinh" ref={ref} className="books">
       <div className="books-stage">
-        <motion.div className="books-head" style={{opacity: head}}>
+        <div className="books-head">
           <span className="kicker">Giáo trình</span>
           <h2>Bộ sách Hán ngữ Hoa Sen</h2>
-          <p>Cuộn xuống để sách bung ra như đóa sen nở · chạm vào từng quyển để xem</p>
-        </motion.div>
+          <p>Sách bung ra như đóa sen nở · chạm vào từng quyển để xem</p>
+        </div>
         <div className="books-fan">
           {BOOKS.map((b, i) => (
-            <FanBook key={b.id} b={b} i={i} n={BOOKS.length} t={scrollYProgress} w={w} vh={vh} onOpen={setOpen} />
+            <FanBook key={b.id} b={b} i={i} n={BOOKS.length} show={show} w={w} vh={vh} onOpen={setOpen} />
           ))}
         </div>
       </div>
@@ -505,6 +507,108 @@ function Contact() {
   );
 }
 
+/** Desktop: một lần lăn chuột = một trang (mượt, có khóa chống nhảy nhiều trang). */
+function usePager(active: boolean) {
+  useEffect(() => {
+    if (!active || LITE) return;
+    let locked = false;
+    let lastWheel = 0;
+    let ctl: ReturnType<typeof animate> | null = null;
+    const html = document.documentElement;
+    const els = () => PAGE_IDS.map((id) => document.getElementById(id)!);
+    const maxScroll = () => document.documentElement.scrollHeight - window.innerHeight;
+    const topOf = (el: HTMLElement) => el.getBoundingClientRect().top + window.scrollY;
+
+    const goTo = (target: number) => {
+      target = Math.max(0, Math.min(maxScroll(), Math.round(target)));
+      ctl?.stop();
+      locked = true;
+      ctl = animate(window.scrollY, target, {
+        duration: 0.8,
+        ease: [0.65, 0, 0.35, 1],
+        onUpdate: (v) => window.scrollTo({top: v, behavior: 'instant' as ScrollBehavior}),
+        onComplete: () => setTimeout(() => (locked = false), 140),
+      });
+    };
+
+    const step = (dir: 1 | -1): boolean => {
+      const list = els();
+      const vh = window.innerHeight;
+      const y = window.scrollY;
+      let idx = 0;
+      list.forEach((el, i) => {
+        if (topOf(el) <= y + 4) idx = i;
+      });
+      const el = list[idx];
+      const top = topOf(el);
+      const bottom = idx === list.length - 1 ? document.documentElement.scrollHeight : topOf(list[idx + 1]);
+      const tall = bottom - top > vh + 6;
+      if (dir > 0) {
+        if (tall && y + vh < bottom - 4) return false; // còn nội dung trong trang này: cuộn thường
+        if (idx >= list.length - 1) return false;
+        goTo(topOf(list[idx + 1]));
+      } else {
+        if (y > top + 4) {
+          if (tall) return false;
+          goTo(top);
+        } else {
+          if (idx === 0) return false;
+          const prev = list[idx - 1];
+          const ph = top - topOf(prev);
+          goTo(topOf(prev) + Math.max(0, ph - vh));
+        }
+      }
+      return true;
+    };
+
+    const busy = () => html.classList.contains('intro-sky') || html.style.overflow === 'hidden';
+    const onWheel = (e: WheelEvent) => {
+      if (busy() || e.ctrlKey || (e.target as HTMLElement | null)?.closest?.('.lightbox')) return;
+      const now = performance.now();
+      const gap = now - lastWheel;
+      lastWheel = now;
+      if (Math.abs(e.deltaY) < 2) return;
+      if (locked || gap < 70) {
+        e.preventDefault();
+        return;
+      }
+      if (step(e.deltaY > 0 ? 1 : -1)) e.preventDefault();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (busy() || e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+      if (document.querySelector('.lightbox')) return;
+      const down = ['ArrowDown', 'PageDown'].includes(e.key) || (e.key === ' ' && !e.shiftKey);
+      const up = ['ArrowUp', 'PageUp'].includes(e.key) || (e.key === ' ' && e.shiftKey);
+      if (!down && !up && e.key !== 'Home' && e.key !== 'End') return;
+      e.preventDefault();
+      if (locked) return;
+      if (e.key === 'Home') goTo(0);
+      else if (e.key === 'End') goTo(maxScroll());
+      else step(down ? 1 : -1);
+    };
+    const onClick = (e: MouseEvent) => {
+      const a = (e.target as HTMLElement | null)?.closest?.('a[href^="#"]') as HTMLAnchorElement | null;
+      if (!a) return;
+      const id = a.getAttribute('href')!.slice(1);
+      const el = document.getElementById(id);
+      if (!el || !PAGE_IDS.includes(id)) return;
+      e.preventDefault();
+      goTo(topOf(el));
+    };
+    window.addEventListener('wheel', onWheel, {passive: false});
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('click', onClick);
+    return () => {
+      ctl?.stop();
+      window.removeEventListener('wheel', onWheel);
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('click', onClick);
+    };
+  }, [active]);
+}
+
 const PAGE_IDS = ['top', 'gioithieu', 'lichhoc', 'giaotrinh', 'sachdientu', 'lophoc', 'lienhe'];
 
 function PageDots({page}: {page: number}) {
@@ -543,6 +647,12 @@ function Lightbox({open, onClose, children}: {open: boolean; onClose: () => void
 export default function Landing() {
   const [docH, setDocH] = useState(6000);
   const [page, setPage] = useState(0);
+  const [zoom, setZoom] = useState(() => (typeof window === 'undefined' ? 1 : Math.max(0.62, Math.min(1, window.innerHeight / 780))));
+  useEffect(() => {
+    const r = () => setZoom(Math.max(0.62, Math.min(1, (window.innerHeight || 780) / 780)));
+    window.addEventListener('resize', r);
+    return () => window.removeEventListener('resize', r);
+  }, []);
   const rootRef = useRef<HTMLDivElement>(null);
   const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const [playing, setPlaying] = useState(!reduce);
@@ -619,19 +729,22 @@ export default function Landing() {
     return () => io.disconnect();
   }, []);
 
-  // Cuộn theo từng khung (snap)
+  usePager(ready && !playing);
+
+  // Cuộn theo từng khung (snap, mobile)
   useEffect(() => {
-    const cls = LITE ? 'paged' : 'paged-d';
-    document.documentElement.classList.add(cls);
-    return () => document.documentElement.classList.remove(cls);
+    if (!LITE) return;
+    document.documentElement.classList.add('paged');
+    return () => document.documentElement.classList.remove('paged');
   }, []);
 
   return (
-    <div className={'landing' + (LITE ? ' lite' : '')} ref={rootRef}>
+    <div className={'landing' + (LITE ? ' lite' : '')} ref={rootRef} style={{['--z' as string]: LITE ? 1 : zoom}}>
+      <GlobalDefs />
       <PondScene docH={docH} descent={descent} page={page} />
       {playing && <SkyIntro t={descent} onSkip={skip} lite={LITE} />}
       <Nav hidden={!ready} />
-      {LITE && ready && <PageDots page={page} />}
+      {ready && <PageDots page={page} />}
       <main>
         <Hero ready={ready} />
         <About />
