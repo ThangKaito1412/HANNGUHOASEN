@@ -1,6 +1,7 @@
 import {useEffect, useMemo, useRef} from 'react';
-import {motion, useScroll, useTransform, useSpring, useMotionValue} from 'motion/react';
+import {motion, useScroll, useTransform, useSpring, useMotionValue, type MotionValue} from 'motion/react';
 import {LilyPad, LotusStatic} from './Lotus';
+import {makeKoi, stepKoi, drawKoi, type Koi} from './Koi';
 
 function mulberry32(seed: number) {
   return function () {
@@ -13,28 +14,8 @@ function mulberry32(seed: number) {
 }
 
 type Ripple = {x: number; y: number; r: number; max: number; a: number; w: number};
-type Fish = {
-  x: number;
-  y: number;
-  ang: number;
-  speed: number;
-  size: number;
-  trail: {x: number; y: number}[];
-  phase: number;
-  turn: number;
-  pal: [string, string, string];
-};
 type Petal = {x: number; y: number; r: number; vr: number; vx: number; vy: number; s: number};
 type Bubble = {x: number; y: number; r: number; vy: number; ph: number};
-
-const PALETTES: [string, string, string][] = [
-  ['#ff8a3d', '#fff4e6', '#e8432e'],
-  ['#ff5a3c', '#ffd9c2', '#b32418'],
-  ['#fff2dd', '#ffb347', '#e8432e'],
-  ['#ffa23a', '#ffffff', '#222a35'],
-  ['#ff7043', '#fff', '#ffcf6b'],
-  ['#f4f1ea', '#ff8a3d', '#e8432e'],
-];
 
 /** Canvas: cá chép bơi, gợn sóng, cánh hoa trôi, bọt nước, ánh nắng dưới nước. */
 function PondCanvas() {
@@ -53,7 +34,7 @@ function PondCanvas() {
     const ripples: Ripple[] = [];
     const pointer = {x: -9999, y: -9999, lastRipple: 0, lastX: 0, lastY: 0};
     let lure: {x: number; y: number; t: number} | null = null;
-    let fish: Fish[] = [];
+    let fish: Koi[] = [];
     let petals: Petal[] = [];
     let bubbles: Bubble[] = [];
 
@@ -69,22 +50,7 @@ function PondCanvas() {
       const mobile = W < 700;
       const nFish = mobile ? 4 : 7;
       const scale = mobile ? 0.72 : 1;
-      fish = Array.from({length: nFish}, (_, i) => {
-        const size = (11 + rnd() * 6) * scale;
-        const x = rnd() * W;
-        const y = rnd() * H;
-        return {
-          x,
-          y,
-          ang: rnd() * Math.PI * 2,
-          speed: 0.7 + rnd() * 0.6,
-          size,
-          trail: Array.from({length: 16}, () => ({x, y})),
-          phase: rnd() * 10,
-          turn: 0,
-          pal: PALETTES[i % PALETTES.length],
-        };
-      });
+      fish = Array.from({length: nFish}, (_, i) => makeKoi(i, W, H, scale, rnd));
       petals = Array.from({length: mobile ? 8 : 16}, () => ({
         x: rnd() * W,
         y: rnd() * H,
@@ -147,94 +113,6 @@ function PondCanvas() {
     window.addEventListener('pond-ripple', onBig);
     document.addEventListener('visibilitychange', onVis);
 
-    const drawFish = (f: Fish, t: number) => {
-      const n = f.trail.length;
-      const pts = f.trail.map((p, i) => {
-        const u = i / (n - 1);
-        const prev = f.trail[Math.max(0, i - 1)];
-        const next = f.trail[Math.min(n - 1, i + 1)];
-        let nx = -(next.y - prev.y);
-        let ny = next.x - prev.x;
-        const l = Math.hypot(nx, ny) || 1;
-        nx /= l;
-        ny /= l;
-        const wob = Math.sin(t * 5 + f.phase - i * 0.55) * f.size * 0.55 * u;
-        return {x: p.x + nx * wob, y: p.y + ny * wob, nx, ny, u};
-      });
-      const width = (u: number) => f.size * Math.pow(Math.sin(Math.PI * Math.min(1, 0.1 + u * 0.92)), 0.75);
-      const body = (dx: number, dy: number, fill: string, alpha: number) => {
-        ctx.beginPath();
-        pts.forEach((p, i) => {
-          const w = width(p.u);
-          const x = p.x + p.nx * w + dx;
-          const y = p.y + p.ny * w + dy;
-          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-        });
-        for (let i = n - 1; i >= 0; i--) {
-          const p = pts[i];
-          const w = width(p.u);
-          ctx.lineTo(p.x - p.nx * w + dx, p.y - p.ny * w + dy);
-        }
-        ctx.closePath();
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = fill;
-        ctx.fill();
-      };
-      // shadow on the pond floor
-      body(10, 14, 'rgb(0,30,40)', 0.18);
-      // tail fin
-      const tail = pts[n - 1];
-      const tb = pts[n - 3];
-      const dir = Math.atan2(tail.y - tb.y, tail.x - tb.x);
-      const sway = Math.sin(t * 5 + f.phase - n * 0.55) * 0.5;
-      ctx.globalAlpha = 0.75;
-      ctx.fillStyle = f.pal[1];
-      ctx.beginPath();
-      ctx.moveTo(tail.x, tail.y);
-      ctx.quadraticCurveTo(
-        tail.x + Math.cos(dir + 0.7 + sway) * f.size * 3.4,
-        tail.y + Math.sin(dir + 0.7 + sway) * f.size * 3.4,
-        tail.x + Math.cos(dir + sway) * f.size * 4.4,
-        tail.y + Math.sin(dir + sway) * f.size * 4.4
-      );
-      ctx.quadraticCurveTo(
-        tail.x + Math.cos(dir - 0.7 + sway) * f.size * 3.4,
-        tail.y + Math.sin(dir - 0.7 + sway) * f.size * 3.4,
-        tail.x,
-        tail.y
-      );
-      ctx.fill();
-      // pectoral fins
-      const pf = pts[3];
-      ctx.fillStyle = f.pal[1];
-      ctx.globalAlpha = 0.7;
-      for (const s of [-1, 1]) {
-        ctx.beginPath();
-        ctx.ellipse(pf.x + pf.nx * f.size * 1.1 * s, pf.y + pf.ny * f.size * 1.1 * s, f.size * 1.2, f.size * 0.4, Math.atan2(pf.ny, pf.nx) + s * 0.9, 0, 6.3);
-        ctx.fill();
-      }
-      body(0, 0, f.pal[0], 0.94);
-      // blotches
-      for (const i of [3, 6, 10]) {
-        const p = pts[i];
-        ctx.globalAlpha = 0.9;
-        ctx.fillStyle = i === 6 ? f.pal[2] : f.pal[1];
-        ctx.beginPath();
-        ctx.ellipse(p.x, p.y, f.size * (i === 6 ? 0.7 : 0.55), f.size * 0.5, Math.atan2(p.ny, p.nx), 0, 6.3);
-        ctx.fill();
-      }
-      // eyes
-      const h = pts[0];
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = '#10222b';
-      for (const s of [-1, 1]) {
-        ctx.beginPath();
-        ctx.arc(h.x + h.nx * f.size * 0.55 * s, h.y + h.ny * f.size * 0.55 * s, f.size * 0.13, 0, 6.3);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    };
-
     let last = performance.now();
     const frame = (now: number) => {
       if (!running) return;
@@ -288,39 +166,22 @@ function PondCanvas() {
         if (f.x > W - m) desired = lerpAng(desired, Math.PI, 0.04 * dt);
         if (f.y < m) desired = lerpAng(desired, Math.PI / 2, 0.04 * dt);
         if (f.y > H - m) desired = lerpAng(desired, -Math.PI / 2, 0.04 * dt);
-        let sp = f.speed;
+        let mul = 1;
         // flee from cursor
         const dx = f.x - pointer.x;
         const dy = f.y - pointer.y;
         const dist = Math.hypot(dx, dy);
         if (dist < 170) {
-          desired = lerpAng(desired, Math.atan2(dy, dx), 0.12 * dt);
-          sp *= 1 + (170 - dist) / 60;
+          desired = lerpAng(desired, Math.atan2(dy, dx), 0.5);
+          mul = 1 + (170 - dist) / 70;
         } else if (lure && lureAge < 2400) {
           const lx = lure.x - f.x;
           const ly = lure.y - f.y;
-          if (Math.hypot(lx, ly) > 26) desired = lerpAng(desired, Math.atan2(ly, lx), 0.05 * dt);
-          sp *= 1.4;
+          if (Math.hypot(lx, ly) > 26) desired = lerpAng(desired, Math.atan2(ly, lx), 0.3);
+          mul = 1.3;
         }
-        f.ang = lerpAng(f.ang, desired, 0.12 * dt);
-        f.x += Math.cos(f.ang) * sp * dt * 1.5;
-        f.y += Math.sin(f.ang) * sp * dt * 1.5;
-        const head = f.trail[0];
-        head.x = f.x;
-        head.y = f.y;
-        const seg = f.size * 0.9;
-        for (let i = 1; i < f.trail.length; i++) {
-          const p = f.trail[i];
-          const q = f.trail[i - 1];
-          const ddx = q.x - p.x;
-          const ddy = q.y - p.y;
-          const d = Math.hypot(ddx, ddy) || 1;
-          if (d > seg) {
-            p.x = q.x - (ddx / d) * seg;
-            p.y = q.y - (ddy / d) * seg;
-          }
-        }
-        drawFish(f, t);
+        stepKoi(f, dt, desired, mul, now);
+        drawKoi(ctx, f);
       }
 
       // petals
@@ -440,7 +301,11 @@ function PadLayer({factor, docH, vh, density, seed, scale, opacity}: {factor: nu
 }
 
 /** Nền ao sen cố định + "máy quay" lia theo cuộn trang và con trỏ. */
-export default function PondScene({docH}: {docH: number}) {
+export default function PondScene({docH, descent}: {docH: number; descent?: MotionValue<number>}) {
+  const done = useMotionValue(1);
+  const d = descent ?? done;
+  const introScale = useTransform(d, [0.5, 1], [2.6, 1]);
+  const introY = useTransform(d, [0.5, 1], ['-8%', '0%']);
   const {scrollYProgress} = useScroll();
   const vh = typeof window === 'undefined' ? 800 : window.innerHeight;
 
@@ -469,12 +334,14 @@ export default function PondScene({docH}: {docH: number}) {
 
   return (
     <div className="scene" aria-hidden="true">
+      <motion.div className="scene-intro" style={{scale: introScale, y: introY}}>
       <motion.div className="scene-cam" style={{backgroundColor: bg, rotate, scale, x, y: sy}}>
         <div className="scene-depth" />
         <PondCanvas />
         <PadLayer factor={0.12} docH={docH} vh={vh} density={1.3} seed={11} scale={0.8} opacity={0.75} />
         <PadLayer factor={0.3} docH={docH} vh={vh} density={0.9} seed={23} scale={1.15} opacity={0.9} />
         <PadLayer factor={0.55} docH={docH} vh={vh} density={0.5} seed={37} scale={1.8} opacity={0.95} />
+      </motion.div>
       </motion.div>
       <div className="scene-vignette" />
     </div>

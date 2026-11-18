@@ -1,8 +1,9 @@
 import {useEffect, useRef, useState, type ReactNode} from 'react';
-import {AnimatePresence, motion, useScroll, useTransform, type MotionValue} from 'motion/react';
+import {AnimatePresence, animate, motion, useMotionValue, useScroll, useTransform, type MotionValue} from 'motion/react';
 import {BookOpen, Clock, Factory, MapPin, Menu, MessageCircle, Phone, Sparkles, Users, X, Headphones, Search, PenLine} from 'lucide-react';
 import PondScene from './PondScene';
 import {LotusBloom} from './Lotus';
+import SkyIntro from './SkyIntro';
 import './landing.css';
 
 const PHONE = '0813 616 813';
@@ -63,7 +64,7 @@ function SectionTitle({kicker, title, sub}: {kicker: string; title: string; sub?
   );
 }
 
-function Nav() {
+function Nav({hidden}: {hidden: boolean}) {
   const [open, setOpen] = useState(false);
   const [solid, setSolid] = useState(false);
   useEffect(() => {
@@ -73,7 +74,7 @@ function Nav() {
     return () => window.removeEventListener('scroll', on);
   }, []);
   return (
-    <header className={'nav' + (solid ? ' nav-solid' : '')}>
+    <header className={'nav' + (solid ? ' nav-solid' : '') + (hidden ? ' nav-hidden' : '')}>
       <a href="#top" className="brand" aria-label="Hán Ngữ Hoa Sen">
         <span className="brand-zh">莲花汉语</span>
         <span className="brand-vi">Hán Ngữ Hoa Sen</span>
@@ -95,7 +96,7 @@ function Nav() {
   );
 }
 
-function Hero() {
+function Hero({ready}: {ready: boolean}) {
   const ref = useRef<HTMLElement>(null);
   const {scrollYProgress} = useScroll({target: ref, offset: ['start start', 'end start']});
   const y = useTransform(scrollYProgress, [0, 1], [0, -120]);
@@ -105,6 +106,7 @@ function Hero() {
   const ls = useTransform(scrollYProgress, [0, 1], [1, 0.8]);
   return (
     <section id="top" ref={ref} className="hero">
+      {ready && (
       <motion.div className="hero-copy" style={{y, scale: s, opacity: o}}>
         <motion.span className="hero-zh" initial={{opacity: 0, y: 30, filter: 'blur(12px)'}} animate={{opacity: 1, y: 0, filter: 'blur(0px)'}} transition={{duration: 1.4, delay: 0.2}}>
           莲花汉语
@@ -127,15 +129,20 @@ function Hero() {
           </a>
         </motion.div>
       </motion.div>
+      )}
+      {ready && (
       <motion.div className="hero-lotus" style={{y: ly, scale: ls}}>
         <motion.div animate={{y: [0, -10, 0], rotate: [-1.2, 1.2, -1.2]}} transition={{duration: 7, repeat: Infinity, ease: 'easeInOut'}}>
           <LotusBloom />
         </motion.div>
       </motion.div>
+      )}
+      {ready && (
       <motion.div className="hero-hint" style={{opacity: o}}>
         <span>Chạm vào mặt nước – cá chép sẽ bơi đến</span>
         <i />
       </motion.div>
+      )}
     </section>
   );
 }
@@ -438,6 +445,39 @@ function Lightbox({open, onClose, children}: {open: boolean; onClose: () => void
 export default function Landing() {
   const [docH, setDocH] = useState(6000);
   const rootRef = useRef<HTMLDivElement>(null);
+  const reduce = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [playing, setPlaying] = useState(!reduce);
+  const [ready, setReady] = useState(reduce);
+  const descent = useMotionValue(reduce ? 1 : 0);
+  const anim = useRef<ReturnType<typeof animate> | null>(null);
+
+  const finish = () => {
+    setReady(true);
+    setPlaying(false);
+  };
+  const skip = () => {
+    anim.current?.stop();
+    anim.current = animate(descent, 1, {duration: 0.8, ease: 'easeOut', onComplete: finish});
+  };
+
+  // Cú lia máy từ trên trời xuống ao: cuộn trang bị khóa trong lúc phát
+  useEffect(() => {
+    if (!playing) return;
+    window.scrollTo(0, 0);
+    const html = document.documentElement;
+    const prev = html.style.overflow;
+    html.style.overflow = 'hidden';
+    anim.current = animate(descent, 1, {duration: 7.5, ease: [0.45, 0.05, 0.4, 1], onComplete: finish});
+    const unsub = descent.on('change', (v) => v > 0.86 && setReady(true));
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && skip();
+    window.addEventListener('keydown', key);
+    return () => {
+      html.style.overflow = prev;
+      unsub();
+      window.removeEventListener('keydown', key);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing]);
 
   useEffect(() => {
     const m = () => setDocH(Math.max(document.documentElement.scrollHeight, 3000));
@@ -474,10 +514,11 @@ export default function Landing() {
 
   return (
     <div className="landing" ref={rootRef}>
-      <PondScene docH={docH} />
-      <Nav />
+      <PondScene docH={docH} descent={descent} />
+      {playing && <SkyIntro t={descent} onSkip={skip} />}
+      <Nav hidden={!ready} />
       <main>
-        <Hero />
+        <Hero ready={ready} />
         <About />
         <Schedule />
         <Books />
