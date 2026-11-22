@@ -10,8 +10,8 @@ import './landing.css';
 const PHONE = '0813 616 813';
 const PHONE_LINK = 'tel:0813616813';
 const ZALO = 'https://zalo.me/0813616813';
-const MAP = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Nhà thờ Tha La, An Hòa, Trảng Bàng');
-const ADDRESS = 'Gần nhà thờ Tha La, An Hòa, Trảng Bàng';
+const MAP = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Hán Ngữ Hoa Sen, 98 Đường Hòa Hội, Trảng Bàng, Tây Ninh');
+const ADDRESS = '98 Đường Hòa Hội, Trảng Bàng, Tây Ninh (gần nhà thờ Tha La)';
 
 const small = (u: string) => u.replace('.jpg', '_s.jpg');
 const thumb = (u: string) => u.replace('/p', '/t');
