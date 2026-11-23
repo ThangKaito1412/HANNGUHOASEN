@@ -10,20 +10,20 @@ import './landing.css';
 const PHONE = '0813 616 813';
 const PHONE_LINK = 'tel:0813616813';
 const ZALO = 'https://zalo.me/0813616813';
-const MAP = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('Hán Ngữ Hoa Sen, 98 Đường Hòa Hội, Trảng Bàng, Tây Ninh');
+const MAP = 'https://maps.app.goo.gl/PHGiKLxR9jUxzKBu9';
 const ADDRESS = '98 Đường Hòa Hội, Trảng Bàng, Tây Ninh (gần nhà thờ Tha La)';
 
 const small = (u: string) => u.replace('.jpg', '_s.jpg');
 const thumb = (u: string) => u.replace('/p', '/t');
 
-type Book = {id: string; img: string; ratio: number; title: string; vol: string; kind: 'gt' | 'lv'; desc: string};
+type Book = {id: string; img: string; ratio: number; title: string; vol: string; kind: 'gt' | 'lv'; desc: string; sample?: string};
 const BOOKS: Book[] = [
   {id: 'gt1', img: '/site/giaotrinh1.jpg', ratio: 1400 / 2355, title: 'Giáo trình Hán ngữ', vol: 'Quyển 1', kind: 'gt', desc: 'Giáo trình nền tảng cho người mới bắt đầu: phát âm, từ vựng, hội thoại và ngữ pháp cơ bản.'},
   {id: 'gt2', img: '/site/giaotrinh2.jpg', ratio: 0.594, title: 'Giáo trình Hán ngữ', vol: 'Quyển 2', kind: 'gt', desc: 'Tiếp nối quyển 1, mở rộng vốn từ và mẫu câu giao tiếp trong đời sống, công việc.'},
   {id: 'gt3', img: '/site/giaotrinh3.jpg', ratio: 0.594, title: 'Giáo trình Hán ngữ', vol: 'Quyển 3', kind: 'gt', desc: 'Nâng cao khả năng nghe – nói – đọc – viết với các chủ đề thực tế.'},
-  {id: 'lv1', img: '/site/luyenviet1.jpg', ratio: 0.773, title: 'Luyện viết Hán ngữ', vol: 'Quyển 1', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 1.'},
-  {id: 'lv2', img: '/site/luyenviet2.jpg', ratio: 0.773, title: 'Luyện viết Hán ngữ', vol: 'Quyển 2', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 2.'},
-  {id: 'lv3', img: '/site/luyenviet3.jpg', ratio: 0.773, title: 'Luyện viết Hán ngữ', vol: 'Quyển 3', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 3.'},
+  {id: 'lv1', img: '/site/luyenviet1.jpg', ratio: 0.708, sample: '/site/vo1.jpg', title: 'Luyện viết Hán ngữ', vol: 'Quyển 1', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 1: mỗi chữ có phiên âm, nghĩa, chữ mẫu, chữ mờ để tô theo và ô trống để tự viết.'},
+  {id: 'lv2', img: '/site/luyenviet2.jpg', ratio: 0.708, sample: '/site/vo2.jpg', title: 'Luyện viết Hán ngữ', vol: 'Quyển 2', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 2: mỗi chữ có phiên âm, nghĩa, chữ mẫu, chữ mờ để tô theo và ô trống để tự viết.'},
+  {id: 'lv3', img: '/site/luyenviet3.jpg', ratio: 0.708, sample: '/site/vo3.jpg', title: 'Luyện viết Hán ngữ', vol: 'Quyển 3', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 3: mỗi chữ có phiên âm, nghĩa, chữ mẫu, chữ mờ để tô theo và ô trống để tự viết.'},
 ];
 
 const PHOTOS = [
@@ -327,9 +327,9 @@ function BookModal({open, setOpen}: {open: Book | null; setOpen: (b: Book | null
   return (
       <Lightbox open={!!open} onClose={() => setOpen(null)}>
         {open && (
-          <div className="bookmodal">
-            <img src={LITE ? small(open.img) : open.img} alt={`${open.title} ${open.vol}`} />
-            <div>
+          <div className={'bookmodal' + (open.sample ? ' has-sample' : '')}>
+            <img className="bm-cover" src={LITE ? small(open.img) : open.img} alt={`${open.title} ${open.vol}`} />
+            <div className="bm-body">
               <span className="kicker">{open.kind === 'gt' ? 'Giáo trình' : 'Vở luyện viết'}</span>
               <h3>
                 {open.title} <em>{open.vol}</em>
@@ -345,6 +345,14 @@ function BookModal({open, setOpen}: {open: Book | null; setOpen: (b: Book | null
                 </a>
               )}
             </div>
+            {open.sample && (
+              <div className="bm-sample">
+                <div className="bm-sample-cap">Trang mẫu trong vở · cuộn để xem</div>
+                <div className="bm-sample-scroll">
+                  <img src={LITE ? open.sample.replace('.jpg', '_s.jpg') : open.sample} alt={`Trang luyện viết mẫu ${open.vol}`} loading="lazy" />
+                </div>
+              </div>
+            )}
           </div>
         )}
     </Lightbox>

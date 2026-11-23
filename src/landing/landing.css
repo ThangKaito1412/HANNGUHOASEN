@@ -1274,3 +1274,53 @@ html.intro-sky .scene {
     height: 26px;
   }
 }
+
+/* Cửa sổ vở luyện viết: bìa + trang mẫu */
+.lightbox-in:has(.has-sample) {
+  max-width: min(1100px, 100%);
+}
+.bookmodal.has-sample {
+  grid-template-columns: 200px 1fr minmax(300px, 46%);
+  align-items: start;
+  gap: 26px;
+}
+.bookmodal.has-sample .bm-cover {
+  max-width: 200px;
+}
+.bm-sample {
+  min-width: 0;
+}
+.bm-sample-cap {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: var(--soft);
+  margin-bottom: 8px;
+}
+.bm-sample-scroll {
+  max-height: min(66svh, 640px);
+  overflow-y: auto;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  -webkit-overflow-scrolling: touch;
+}
+.bm-sample-scroll img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+@media (max-width: 900px) {
+  .bookmodal.has-sample {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+  .bookmodal.has-sample .bm-cover {
+    max-width: 150px;
+  }
+  .bookmodal.has-sample .bm-sample {
+    width: 100%;
+  }
+  .bm-sample-scroll {
+    max-height: 52svh;
+  }
+}
