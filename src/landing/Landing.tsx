@@ -21,9 +21,9 @@ const BOOKS: Book[] = [
   {id: 'gt1', img: '/site/giaotrinh1.jpg', ratio: 1400 / 2355, title: 'Giáo trình Hán ngữ', vol: 'Quyển 1', kind: 'gt', desc: 'Giáo trình nền tảng cho người mới bắt đầu: phát âm, từ vựng, hội thoại và ngữ pháp cơ bản.'},
   {id: 'gt2', img: '/site/giaotrinh2.jpg', ratio: 0.594, title: 'Giáo trình Hán ngữ', vol: 'Quyển 2', kind: 'gt', desc: 'Tiếp nối quyển 1, mở rộng vốn từ và mẫu câu giao tiếp trong đời sống, công việc.'},
   {id: 'gt3', img: '/site/giaotrinh3.jpg', ratio: 0.594, title: 'Giáo trình Hán ngữ', vol: 'Quyển 3', kind: 'gt', desc: 'Nâng cao khả năng nghe – nói – đọc – viết với các chủ đề thực tế.'},
-  {id: 'lv1', img: '/site/luyenviet1.jpg', ratio: 0.708, sample: '/site/vo1.jpg', title: 'Luyện viết Hán ngữ', vol: 'Quyển 1', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 1: mỗi chữ có phiên âm, nghĩa, chữ mẫu, chữ mờ để tô theo và ô trống để tự viết.'},
-  {id: 'lv2', img: '/site/luyenviet2.jpg', ratio: 0.708, sample: '/site/vo2.jpg', title: 'Luyện viết Hán ngữ', vol: 'Quyển 2', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 2: mỗi chữ có phiên âm, nghĩa, chữ mẫu, chữ mờ để tô theo và ô trống để tự viết.'},
-  {id: 'lv3', img: '/site/luyenviet3.jpg', ratio: 0.708, sample: '/site/vo3.jpg', title: 'Luyện viết Hán ngữ', vol: 'Quyển 3', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 3: mỗi chữ có phiên âm, nghĩa, chữ mẫu, chữ mờ để tô theo và ô trống để tự viết.'},
+  {id: 'lv1', img: '/site/luyenviet1.jpg?v=2', ratio: 0.708, sample: '/site/vo1.jpg?v=2', title: 'Luyện viết Hán ngữ', vol: 'Quyển 1', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 1: mỗi chữ có phiên âm, nghĩa, chữ mẫu, chữ mờ để tô theo và ô trống để tự viết.'},
+  {id: 'lv2', img: '/site/luyenviet2.jpg?v=2', ratio: 0.708, sample: '/site/vo2.jpg?v=2', title: 'Luyện viết Hán ngữ', vol: 'Quyển 2', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 2: mỗi chữ có phiên âm, nghĩa, chữ mẫu, chữ mờ để tô theo và ô trống để tự viết.'},
+  {id: 'lv3', img: '/site/luyenviet3.jpg?v=2', ratio: 0.708, sample: '/site/vo3.jpg?v=2', title: 'Luyện viết Hán ngữ', vol: 'Quyển 3', kind: 'lv', desc: 'Vở luyện viết chữ Hán đi cùng giáo trình quyển 3: mỗi chữ có phiên âm, nghĩa, chữ mẫu, chữ mờ để tô theo và ô trống để tự viết.'},
 ];
 
 const PHOTOS = [
