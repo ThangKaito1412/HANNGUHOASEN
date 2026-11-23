@@ -10,8 +10,8 @@ const BACK: Layer[] = [
   {angles: [-62, -36, 0, 36, 62], scale: 0.98, fill: 'url(#petalMid)', delay: 0.25},
 ];
 const FRONT: Layer[] = [
-  {angles: [-50, -27, 27, 50], scale: 0.56, fill: 'url(#petalMid)', delay: 1.3},
-  {angles: [-15, 15], scale: 0.5, fill: 'url(#petalFront)', delay: 1.5},
+  {angles: [-62, -40, 40, 62], scale: 0.64, fill: 'url(#petalMid)', delay: 1.3},
+  {angles: [-22, 22], scale: 0.44, fill: 'url(#petalFront)', delay: 1.5},
 ];
 
 const hash = (k: number) => {
@@ -123,7 +123,9 @@ export function LotusBloom({className}: {className?: string}) {
       <g transform="translate(200 262)">
         {BACK.map(grow)}
         <motion.g initial={{opacity: 0, scale: 0.3}} animate={{opacity: 1, scale: 1}} transition={{delay: 1.1, duration: 1}} style={{originX: 0.5, originY: 1}}>
-          <Stamens />
+          <g transform="translate(0 24) scale(0.78)">
+            <Stamens />
+          </g>
         </motion.g>
         {FRONT.map(grow)}
       </g>
@@ -137,7 +139,9 @@ export function LotusStatic() {
     <svg viewBox="0 0 400 300" aria-hidden="true">
       <g transform="translate(200 262)">
         {BACK.map((layer, li) => layer.angles.map((a, i) => <PetalShape key={`b${li}-${i}`} a={a} layer={layer} detail={false} />))}
-        <Stamens detail={false} />
+        <g transform="translate(0 24) scale(0.78)">
+          <Stamens detail={false} />
+        </g>
         {FRONT.map((layer, li) => layer.angles.map((a, i) => <PetalShape key={`f${li}-${i}`} a={a} layer={layer} detail={false} />))}
       </g>
     </svg>
